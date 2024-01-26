@@ -37,12 +37,6 @@ public:
     void sliderValueChanged (juce::Slider *slider) override;
     void buttonClicked(juce::Button* btn) override;
     
-    void generateBtnClicked();
-    void playBtnClicked();
-    void stopBtnClicked();
-    void saveBtnClicked();
-    void styleChanged();
-    
     // from MidiKeyboardState
     void handleNoteOn(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float
  velocity) override; 
@@ -59,6 +53,14 @@ private:
     void updateProgress(int, int);
     void enableUI();
     void disableUI();
+    
+    void generateBtnClicked();
+    void playBtnClicked();
+    void stopBtnClicked();
+    void saveBtnClicked();
+    void styleChanged();
+    void chooseModelsPathClicked();
+    std::string askModelPath();
     
 private:
     std::unique_ptr<MainGui> mainGui;

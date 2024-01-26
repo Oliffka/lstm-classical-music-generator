@@ -51,9 +51,12 @@ public:
     
     void setGenerateBtnClickedCallback(btnClickedCallback);
     void setPlayBtnClickedCallback(btnClickedCallback);
+    void setPlayInitSongBtnClickedCallback(btnClickedCallback);
     void setStopBtnClickedCallback(btnClickedCallback);
     void setSaveBtnClickedCallback(btnClickedCallback);
     void setStyleChangedCallback(cmbChangedCallback);
+    void setChooseFolderBtnClickedCallback(btnClickedCallback);
+    void setOpenFolderClickedCallback(btnClickedCallback);
 
     void onSongIsFinished();
     
@@ -64,6 +67,7 @@ public:
     
     void setProgress(int);
     void updateProgressLabel(int numGenerated, int numTotal);
+    void setModelsFolderPath(const std::string&);
     
     void fillStyleCmb(const std::vector<std::string>& styles);
     void fillDepthCmb(const std::vector<int>& depths);
@@ -87,7 +91,11 @@ private:
     btnClickedCallback generateBtnClickedCallback;
     btnClickedCallback saveBtnClickedCallback;
     btnClickedCallback playBtnClickedCallback;
+    btnClickedCallback playInitSongBtnClickedCallback;
     btnClickedCallback stopBtnClickedCallback;
+    btnClickedCallback openFolderClickedCallback;
+    btnClickedCallback chooseFolderClickedCallback;
+    
     cmbChangedCallback styleChangedCallback;
     
     bool isPlaying{false};

@@ -292,6 +292,7 @@ MainGui::MainGui ()
 
     //[Constructor] You can add your own custom stuff here..
     sliderProgress->setEnabled(false);
+    txtPath->setEnabled(false);
     //[/Constructor]
 }
 
@@ -394,16 +395,22 @@ void MainGui::buttonClicked (juce::Button* buttonThatWasClicked)
     else if (buttonThatWasClicked == btnPlayStyleSong.get())
     {
         //[UserButtonCode_btnPlayStyleSong] -- add your button handler code here..
+        if (playInitSongBtnClickedCallback)
+            playInitSongBtnClickedCallback();
         //[/UserButtonCode_btnPlayStyleSong]
     }
     else if (buttonThatWasClicked == btnChoosePath.get())
     {
         //[UserButtonCode_btnChoosePath] -- add your button handler code here..
+        if (chooseFolderClickedCallback)
+            chooseFolderClickedCallback();
         //[/UserButtonCode_btnChoosePath]
     }
     else if (buttonThatWasClicked == btnOpenFolder.get())
     {
         //[UserButtonCode_btnOpenFolder] -- add your button handler code here..
+        if (openFolderClickedCallback)
+            chooseFolderClickedCallback();
         //[/UserButtonCode_btnOpenFolder]
     }
 
@@ -479,6 +486,11 @@ void MainGui::enableUI(bool enable)
         cmbStyle->setEnabled(enable);
         cmbSongs->setEnabled(enable);
     });
+}
+
+void MainGui::setModelsFolderPath(const std::string& folderPath)
+{
+    this->txtPath->setText(folderPath);
 }
 
 void MainGui::setProgress(int progress)
@@ -608,6 +620,21 @@ void MainGui::setSaveBtnClickedCallback(btnClickedCallback callback)
 void MainGui::setStyleChangedCallback(cmbChangedCallback callback)
 {
     styleChangedCallback = callback;
+}
+
+void MainGui::setChooseFolderBtnClickedCallback(btnClickedCallback callback)
+{
+    chooseFolderClickedCallback = callback;
+}
+
+void MainGui::setOpenFolderClickedCallback(btnClickedCallback callback)
+{
+    openFolderClickedCallback = callback;
+}
+
+void MainGui::setPlayInitSongBtnClickedCallback(btnClickedCallback callback)
+{
+    playInitSongBtnClickedCallback = callback;
 }
 //[/MiscUserCode]
 

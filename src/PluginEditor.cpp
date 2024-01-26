@@ -10,14 +10,11 @@
 #include "PluginEditor.h"
 #include "MainGui.h"
 
+namespace fs = std::filesystem;
 //==============================================================================
 LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
-    //miniPianoKbd{kbdState,
-    //juce::MidiKeyboardComponent::horizontalKeyboard}
-{    
-
-
+{
     // Make sure that before the constructor has finished, you've set the
     // editor's size to whatever you need it to be.
     mainGui = std::make_unique<MainGui>();
@@ -28,6 +25,7 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     mainGui->setPlayBtnClickedCallback(std::bind(&LstmMusicEditor::playBtnClicked, this));
     mainGui->setSaveBtnClickedCallback(std::bind(&LstmMusicEditor::saveBtnClicked, this));
     mainGui->setStopBtnClickedCallback(std::bind(&LstmMusicEditor::stopBtnClicked, this));
+    mainGui->setChooseFolderBtnClickedCallback(std::bind(&LstmMusicEditor::chooseModelsPathClicked, this));
     mainGui->setStyleChangedCallback(std::bind(&LstmMusicEditor::styleChanged, this));
     audioProcessor.setSongIsFinishedCallback(std::bind(&LstmMusicEditor::songIsFinished, this));
     using namespace std::placeholders;
@@ -37,21 +35,15 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     addAndMakeVisible (mainGui.get());
     setSize (mainGui->getWidth(), mainGui->getHeight());
     
-    updateLstmDepths();
-    updateMusicalStyles();
-    updateTestSongs();
     updateProgress(0, 0);
-    // listen to the mini piano
-    //kbdState.addListener(this);
-    //addAndMakeVisible(miniPianoKbd);
 
-    //resetButton.setButtonText("Generate melody");
-    //addAndMakeVisible(resetButton);
-    //resetButton.addListener(this);
-
-    //isLearningButton.setButtonText("Machine is learning");
-    //addAndMakeVisible(isLearningButton);
-    //isLearningButton.addListener(this);
+    juce::AlertWindow::showMessageBoxAsync( juce::MessageBoxIconType::InfoIcon,
+    TRANS("How to start"),
+    TRANS("Before you start, please choose the folder with the models.\nYou can find the button in the \'parameters\' block." ));
+    
+    updateMusicalStyles();
+    updateLstmDepths();
+    updateTestSongs();
 }
 
 LstmMusicEditor::~LstmMusicEditor()
@@ -147,6 +139,20 @@ void LstmMusicEditor::saveBtnClicked()
     this->audioProcessor.saveMidi();
 }
 
+void LstmMusicEditor::chooseModelsPathClicked()
+{
+    const auto modelPath = askModelPath();
+    if (!fs::exists(modelPath))
+        return;
+    
+    this->audioProcessor.initModels(modelPath);
+    mainGui->setModelsFolderPath(modelPath);
+    
+    updateLstmDepths();
+    updateMusicalStyles();
+    updateTestSongs();
+}
+
 void LstmMusicEditor::styleChanged()
 {
     const auto currentStyle = mainGui->getStyle();
@@ -185,6 +191,20 @@ void LstmMusicEditor::buttonClicked(juce::Button* btn)
             isLearningButton.setButtonText("Stop learning");
         }
     }*/
+}
+
+std::string LstmMusicEditor::askModelPath()
+{
+    std::string path;
+    juce::FileChooser chooser("Select a folder with models...",
+                              juce::File::getSpecialLocation(juce::File::userDocumentsDirectory)
+                              );
+
+    if (chooser.browseForDirectory())
+    {
+        path = chooser.getResult().getFullPathName().toStdString();// fullPath();
+    }
+    return path;
 }
 
 void LstmMusicEditor::handleNoteOn(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float velocity)

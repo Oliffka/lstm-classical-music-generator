@@ -11,7 +11,6 @@
 // #include <JuceHeader.h>
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
-//#include "MarkovManager.h"
 #include "ChordDetector.h"
 #include "model.h"
 #include <memory>
@@ -92,6 +91,8 @@ public:
     
     void setCurrentStyle(const std::string& style);
     
+    void initModels(const std::string& path);
+    
     std::vector<int> getLstmDepths();
     std::vector<std::string> getMusicalStyles();
     std::vector<std::string> getTestSongs();
@@ -138,7 +139,6 @@ private:
     std::vector<int> notesToIndices(const std::vector<std::string>&);
     std::vector<std::string> indicesToNotes(const std::vector<int>&);
     
-    void initModels();
     /** stores messages added from the addMidi function*/
     juce::MidiBuffer midiToProcess;
     juce::MidiBuffer midiToPlay;
@@ -166,14 +166,14 @@ private:
      * @param notesVec 
      * @return std::string 
      */
-    static std::string notesToMarkovState(const std::vector<int>& notesVec);
+    static std::string notesArrayToString(const std::vector<int>& notesVec);
     /**
-     * @brief converts a string representation of notes from notesToMarkovState back to an int vector of midi note values
-     * 
+     * @brief converts a string representation of notes from notesArrayToString back to an int vector of midi note values
+     *
      * @param notesStr 
      * @return std::vector<int> 
      */
-    static std::vector<int> markovStateToNotes(const std::string& notesStr);
+    static std::vector<int> stringToNotesArray(const std::string& notesStr);
 
 
       //==============================================================================

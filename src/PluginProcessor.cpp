@@ -33,7 +33,6 @@ LstmMusicProcessor::LstmMusicProcessor()
 #endif
 , chordDetect{100}, learningMode{false}
 {
-    initModels();
 }
 
 
@@ -56,10 +55,12 @@ void LstmMusicProcessor::setGenerationCompletedCallback(voidCallback callback)
     generationCompletedCallback = callback;
 }
 
-void LstmMusicProcessor::initModels()
+void LstmMusicProcessor::initModels(const std::string& modelPath)
 {
-    const auto modelPath = "/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/models";
-    
+    //const auto modelPath = askModelPath();//"/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/models";
+    if (!fs::exists(modelPath))
+        return;
+
     for (const auto & entry : fs::directory_iterator(modelPath))
     {
         if (fs::is_directory(entry))
@@ -284,7 +285,7 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
         if (lastNotes != "")
         {
-            auto notesArray = markovStateToNotes(lastNotes);
+            auto notesArray = stringToNotesArray(lastNotes);
             for (auto& note: notesArray)
             {
                 midiMessages.addEvent(juce::MidiMessage::noteOff (1, note), offset);
@@ -295,7 +296,7 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         if (currentNote < outputNotesStr.size())
         {
             lastNotes = outputNotesStr[currentNote];
-            auto notesArray = markovStateToNotes(lastNotes);
+            auto notesArray = stringToNotesArray(lastNotes);
             if (notesArray.size() > 1)
                 DBG("Here is the chord!!");
             
@@ -309,7 +310,7 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
         {
             if (lastNotes != "")
             {
-                auto notesArray = markovStateToNotes(lastNotes);
+                auto notesArray = stringToNotesArray(lastNotes);
                 for (auto& note: notesArray)
                 {
                     midiMessages.addEvent(juce::MidiMessage::noteOff (1, note), offset);
@@ -506,7 +507,7 @@ juce::MidiMessageSequence LstmMusicProcessor::buildMidiSequence()
     auto notesStr = indicesToNotes(outputNotes);
     for (auto noteStr: notesStr)
     {
-        auto notes = markovStateToNotes(noteStr);
+        auto notes = stringToNotesArray(noteStr);
         
         if (notes.size() > 1)
             DBG("Here is the chord!!");
@@ -544,7 +545,7 @@ void LstmMusicProcessor::writeMidiFile(const std::vector<int>& indices)
     auto notesStr = indicesToNotes(indices);
     for (auto noteStr: notesStr)
     {
-        auto notes = markovStateToNotes(noteStr);
+        auto notes = stringToNotesArray(noteStr);
         
         if (notes.size() > 1)
             DBG("Here is the chord!!");
@@ -710,7 +711,7 @@ void LstmMusicProcessor::addMidi(juce::MidiMessage msg, int sampleOffset)
 }
 
 
-std::string LstmMusicProcessor::notesToMarkovState(const std::vector<int>& notesArray)
+std::string LstmMusicProcessor::notesArrayToString(const std::vector<int>& notesArray)
 {
   std::string state{""};
   for (const auto& note : notesArray)
@@ -725,13 +726,13 @@ std::string LstmMusicProcessor::notesToMarkovState(const std::vector<int>& notes
   return state;
 }
 
-std::vector<int> LstmMusicProcessor::markovStateToNotes(const std::string& notesStr)
+std::vector<int> LstmMusicProcessor::stringToNotesArray(const std::string& notesStr)
 {
     std::vector<int> notes;
     if (notesStr == "0") return notes;
 
     juce::StringArray tokens;
-    tokens.addTokens (notesStr, ".");
+    tokens.addTokens (notesStr, '.');
 
     for (int i=0; i<tokens.size(); i++)
     {
@@ -745,14 +746,12 @@ std::vector<int> LstmMusicProcessor::markovStateToNotes(const std::string& notes
     return notes;
 }
 
-
-//// modular functions for processblock
 std::string LstmMusicProcessor::learnNotes()
 {
     std::string notes;
     if (chordDetect.hasChord())
     {
-        notes = notesToMarkovState(chordDetect.getChord());
+        notes = notesArrayToString(chordDetect.getChord());
     }
     return notes;
 }
