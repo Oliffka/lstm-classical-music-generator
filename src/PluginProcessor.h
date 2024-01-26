@@ -81,7 +81,7 @@ public:
     // generate new notes sequence using chosen lstm model
     bool generateMelody(const std::string& style, const std::string& song, int lstmDepth, int notesCount);
     
-    void saveMidi();
+    void saveMidi(const std::string&);
     
     void playMidi();
     
@@ -132,7 +132,7 @@ private:
     std::vector<float> normalizeVector(const std::vector<int>& data, int vocabSize);
     
     void runGeneration(int lstmDepth, int notesCount);
-    void writeMidiFile(const std::vector<int>& notes);
+    void writeMidiFile(const std::string& midiPath);
     juce::MidiMessageSequence buildMidiSequence();
     bool initVocabulary(const std::string& path);
     

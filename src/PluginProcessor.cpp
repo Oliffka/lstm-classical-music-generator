@@ -61,6 +61,8 @@ void LstmMusicProcessor::initModels(const std::string& modelPath)
     if (!fs::exists(modelPath))
         return;
 
+    musicDict.clear();
+    
     for (const auto & entry : fs::directory_iterator(modelPath))
     {
         if (fs::is_directory(entry))
@@ -461,10 +463,9 @@ void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount)
     }
 }
 
-void LstmMusicProcessor::saveMidi()
+void LstmMusicProcessor::saveMidi(const std::string& midiPath)
 {
-    //TODO: ask user for output path
-    writeMidiFile(outputNotes);
+    writeMidiFile(midiPath);
 }
 
 void LstmMusicProcessor::playMidi()
@@ -532,7 +533,7 @@ juce::MidiMessageSequence LstmMusicProcessor::buildMidiSequence()
     return midiSequence;
 }
 
-void LstmMusicProcessor::writeMidiFile(const std::vector<int>& indices)
+void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
 {
     juce::MidiFile midiFile;
 
@@ -542,7 +543,7 @@ void LstmMusicProcessor::writeMidiFile(const std::vector<int>& indices)
     float interval = 50; //msec
     float start = 0;
     
-    auto notesStr = indicesToNotes(indices);
+    auto notesStr = indicesToNotes(outputNotes);
     for (auto noteStr: notesStr)
     {
         auto notes = stringToNotesArray(noteStr);
@@ -567,15 +568,14 @@ void LstmMusicProcessor::writeMidiFile(const std::vector<int>& indices)
         }
         start += interval;
     }
-    //DBG(midiSequence);
     
     // Add the MidiMessageSequence to the MidiFile
     midiFile.setTicksPerQuarterNote(96); // Set ticks per quarter note
     midiFile.addTrack(midiSequence);
 
     // Save the MidiFile to disk
-    std::string outfilePath = "/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/output/out.mid";
-    juce::File midiOutputFile(outfilePath);
+    //std::string outfilePath = "/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/output/out.mid";
+    juce::File midiOutputFile(midiPath);
     
     std::unique_ptr<juce::FileOutputStream> outputStream(midiOutputFile.createOutputStream());
     

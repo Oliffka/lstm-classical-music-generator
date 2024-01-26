@@ -136,7 +136,17 @@ void LstmMusicEditor::stopBtnClicked()
 
 void LstmMusicEditor::saveBtnClicked()
 {
-    this->audioProcessor.saveMidi();
+    std::string midiPath;
+    juce::FileChooser chooser("Save your midi as...",
+            juce::File::getSpecialLocation(juce::File::userDocumentsDirectory),
+            "*.mid");
+    
+    if (chooser.browseForFileToSave(true))
+    {
+        midiPath = chooser.getResult().getFullPathName().toStdString();
+        this->audioProcessor.saveMidi(midiPath);
+    }
+
 }
 
 void LstmMusicEditor::chooseModelsPathClicked()
@@ -148,15 +158,15 @@ void LstmMusicEditor::chooseModelsPathClicked()
     this->audioProcessor.initModels(modelPath);
     mainGui->setModelsFolderPath(modelPath);
     
-    updateLstmDepths();
     updateMusicalStyles();
-    updateTestSongs();
+    styleChanged();
 }
 
 void LstmMusicEditor::styleChanged()
 {
     const auto currentStyle = mainGui->getStyle();
     this->audioProcessor.setCurrentStyle(currentStyle);
+    updateLstmDepths();
     updateTestSongs();
 }
 
@@ -202,7 +212,7 @@ std::string LstmMusicEditor::askModelPath()
 
     if (chooser.browseForDirectory())
     {
-        path = chooser.getResult().getFullPathName().toStdString();// fullPath();
+        path = chooser.getResult().getFullPathName().toStdString();
     }
     return path;
 }
