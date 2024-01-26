@@ -59,12 +59,14 @@ private:
     void stopBtnClicked();
     void saveBtnClicked();
     void styleChanged();
+    void openFolderClicked();
     void chooseModelsPathClicked();
     std::string askModelPath();
     
 private:
     std::unique_ptr<MainGui> mainGui;
     std::function<void(void*)> voidFunction;
+    std::string lastSavePath;
 
     // This reference is provided as a quick way for your editor to
     // access the processor object that created it.

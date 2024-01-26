@@ -410,7 +410,7 @@ void MainGui::buttonClicked (juce::Button* buttonThatWasClicked)
     {
         //[UserButtonCode_btnOpenFolder] -- add your button handler code here..
         if (openFolderClickedCallback)
-            chooseFolderClickedCallback();
+            openFolderClickedCallback();
         //[/UserButtonCode_btnOpenFolder]
     }
 

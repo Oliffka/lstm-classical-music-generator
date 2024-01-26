@@ -732,12 +732,9 @@ std::vector<int> LstmMusicProcessor::stringToNotesArray(const std::string& notes
     if (notesStr == "0") return notes;
 
     juce::StringArray tokens;
-    tokens.addTokens (notesStr, '.');
-
-    for (int i=0; i<tokens.size(); i++)
-    {
-       tokens[i].getIntValue(); // holds next token
-    }
+    tokens.addTokens(notesStr, ".", "\"");
+    DBG("tokens size = ");
+    DBG(tokens.size());
 
     for (const auto& note : tokens)
     {

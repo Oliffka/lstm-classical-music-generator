@@ -25,6 +25,7 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     mainGui->setPlayBtnClickedCallback(std::bind(&LstmMusicEditor::playBtnClicked, this));
     mainGui->setSaveBtnClickedCallback(std::bind(&LstmMusicEditor::saveBtnClicked, this));
     mainGui->setStopBtnClickedCallback(std::bind(&LstmMusicEditor::stopBtnClicked, this));
+    mainGui->setOpenFolderClickedCallback(std::bind(&LstmMusicEditor::openFolderClicked, this));
     mainGui->setChooseFolderBtnClickedCallback(std::bind(&LstmMusicEditor::chooseModelsPathClicked, this));
     mainGui->setStyleChangedCallback(std::bind(&LstmMusicEditor::styleChanged, this));
     audioProcessor.setSongIsFinishedCallback(std::bind(&LstmMusicEditor::songIsFinished, this));
@@ -134,6 +135,12 @@ void LstmMusicEditor::stopBtnClicked()
     this->audioProcessor.stopPlayingMidi();
 }
 
+void LstmMusicEditor::openFolderClicked()
+{
+    juce::File midiFile{lastSavePath};
+    midiFile.revealToUser();
+}
+
 void LstmMusicEditor::saveBtnClicked()
 {
     std::string midiPath;
@@ -145,6 +152,7 @@ void LstmMusicEditor::saveBtnClicked()
     {
         midiPath = chooser.getResult().getFullPathName().toStdString();
         this->audioProcessor.saveMidi(midiPath);
+        lastSavePath = midiPath;
     }
 
 }
