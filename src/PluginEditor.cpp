@@ -185,7 +185,11 @@ void LstmMusicEditor::songIsFinished()
 
 void LstmMusicEditor::updateProgress(int numGenerated, int numTotal)
 {
-    mainGui->setProgress(float(numGenerated) / numTotal * 100);
+    if (numTotal == 0)
+        mainGui->setProgress(0);
+    else
+        mainGui->setProgress(double(numGenerated) / numTotal);
+    
     mainGui->updateProgressLabel(numGenerated, numTotal);
 }
 

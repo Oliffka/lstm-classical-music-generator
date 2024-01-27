@@ -65,7 +65,7 @@ public:
     std::string getStyle();
     std::string getSong();
     
-    void setProgress(int);
+    void setProgress(double);
     void updateProgressLabel(int numGenerated, int numTotal);
     void setModelsFolderPath(const std::string&);
     
@@ -97,6 +97,7 @@ private:
     btnClickedCallback chooseFolderClickedCallback;
     
     cmbChangedCallback styleChangedCallback;
+    double progress = 0.0;
     
     bool isPlaying{false};
     //[/UserVariables]
@@ -114,7 +115,6 @@ private:
     std::unique_ptr<juce::ComboBox> cmbDepth;
     std::unique_ptr<juce::Label> lblDepth;
     std::unique_ptr<juce::TextButton> btnSave;
-    std::unique_ptr<juce::Slider> sliderProgress;
     std::unique_ptr<juce::TextButton> btnPlayStyleSong;
     std::unique_ptr<juce::Label> lblStyleDescription;
     std::unique_ptr<juce::Label> lblModelsFolder;
@@ -122,6 +122,7 @@ private:
     std::unique_ptr<juce::TextButton> btnChoosePath;
     std::unique_ptr<juce::TextButton> btnOpenFolder;
     std::unique_ptr<juce::Label> lblProgress;
+    std::unique_ptr<juce::ProgressBar> barProgress;
 
 
     //==============================================================================

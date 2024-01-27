@@ -159,15 +159,10 @@ MainGui::MainGui ()
 
     btnSave->setBounds (240, 408, 80, 40);
 
-    sliderProgress.reset (new juce::Slider ("sliderProgress"));
-    addAndMakeVisible (sliderProgress.get());
-    sliderProgress->setRange (0, 100, 1);
-    sliderProgress->setSliderStyle (juce::Slider::LinearBar);
-    sliderProgress->setTextBoxStyle (juce::Slider::TextBoxLeft, true, 80, 20);
-    sliderProgress->addListener (this);
-
-    sliderProgress->setBounds (33, 507, 415, 24);
-
+    barProgress.reset(new juce::ProgressBar (progress));
+    addAndMakeVisible (barProgress.get());
+    barProgress->setBounds (33, 507, 415, 24);
+                      
     btnPlayStyleSong.reset (new juce::TextButton ("btnPlayStyleSong"));
     addAndMakeVisible (btnPlayStyleSong.get());
     btnPlayStyleSong->setTooltip (TRANS("play newly generated musical piece\n"));
@@ -282,16 +277,14 @@ MainGui::MainGui ()
     sliderLen->setColour(juce::Slider::textBoxOutlineColourId, btnTextColor);
     sliderLen->setColour(juce::Slider::trackColourId, btnColor);
     sliderLen->setColour(juce::Slider::textBoxTextColourId, btnTextColor);
-    
-    sliderProgress->setColour(juce::Slider::textBoxOutlineColourId, btnTextColor);
-    sliderProgress->setColour(juce::Slider::trackColourId, btnColor);
-    sliderProgress->setColour(juce::Slider::textBoxTextColourId, btnTextColor);
+            
+    barProgress->setColour(juce::ProgressBar::backgroundColourId, btnColor);
+    barProgress->setColour(juce::ProgressBar::foregroundColourId, btnTextColor);
 
     setSize (480, 580);
     //[/UserPreSize]
 
     //[Constructor] You can add your own custom stuff here..
-    sliderProgress->setEnabled(false);
     txtPath->setEnabled(false);
     //[/Constructor]
 }
@@ -313,7 +306,6 @@ MainGui::~MainGui()
     cmbDepth = nullptr;
     lblDepth = nullptr;
     btnSave = nullptr;
-    sliderProgress = nullptr;
     btnPlayStyleSong = nullptr;
     lblStyleDescription = nullptr;
     lblModelsFolder = nullptr;
@@ -321,6 +313,7 @@ MainGui::~MainGui()
     btnChoosePath = nullptr;
     btnOpenFolder = nullptr;
     lblProgress = nullptr;
+    barProgress = nullptr;
 
     //[Destructor]. You can add your own custom destruction code here..
     //[/Destructor]
@@ -457,11 +450,6 @@ void MainGui::sliderValueChanged (juce::Slider* sliderThatWasMoved)
         //[UserSliderCode_sliderLen] -- add your slider handling code here..
         //[/UserSliderCode_sliderLen]
     }
-    else if (sliderThatWasMoved == sliderProgress.get())
-    {
-        //[UserSliderCode_sliderProgress] -- add your slider handling code here..
-        //[/UserSliderCode_sliderProgress]
-    }
 
     //[UsersliderValueChanged_Post]
     //[/UsersliderValueChanged_Post]
@@ -493,15 +481,9 @@ void MainGui::setModelsFolderPath(const std::string& folderPath)
     this->txtPath->setText(folderPath);
 }
 
-void MainGui::setProgress(int progress)
+void MainGui::setProgress(double curProgress)
 {
-    MessageManager::callAsync([this, progress] ()
-    {
-        if (progress >= 0 && progress <= 100)
-        {
-            sliderProgress->setValue(progress);
-        }
-    });
+    progress = curProgress;
 }
 
 void MainGui::updateProgressLabel(int numGenerated, int numTotal)
@@ -703,11 +685,6 @@ BEGIN_JUCER_METADATA
   <TEXTBUTTON name="btnSave" id="7dec4a87eb71e24e" memberName="btnSave" virtualName=""
               explicitFocusOrder="0" pos="240 408 80 40" buttonText="Save..."
               connectedEdges="0" needsCallback="1" radioGroupId="0"/>
-  <SLIDER name="sliderProgress" id="c29f8f28b49cf0a" memberName="sliderProgress"
-          virtualName="" explicitFocusOrder="0" pos="33 475 415 24" min="0.0"
-          max="10.0" int="0.0" style="LinearBar" textBoxPos="TextBoxLeft"
-          textBoxEditable="0" textBoxWidth="80" textBoxHeight="20" skewFactor="1.0"
-          needsCallback="1"/>
   <TEXTBUTTON name="btnPlayStyleSong" id="25509d4981a10cb5" memberName="btnPlayStyleSong"
               virtualName="" explicitFocusOrder="0" pos="342 136 104 40" tooltip="play newly generated musical piece&#10;"
               buttonText="Play" connectedEdges="0" needsCallback="1" radioGroupId="0"/>
