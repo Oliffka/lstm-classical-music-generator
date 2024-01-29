@@ -82,7 +82,7 @@ public:
     
     void stopPlayingMidi();
     
-    bool openMidi(const std::string& path, int depth);
+    bool readMidi(const std::string& path);
     
     void setCurrentStyle(const std::string& style);
     
@@ -125,7 +125,7 @@ private:
     std::vector<std::string> extractPattern(int maxLength);
     std::vector<float> normalizeVector(const std::vector<int>& data, int vocabSize);
     
-    void runGeneration(int lstmDepth, int notesCount, const std::string& modelPath);
+    void runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath);
     void writeMidiFile(const std::string& midiPath);
     juce::MidiMessageSequence buildMidiSequence();
     bool initVocabulary(const std::string& path);

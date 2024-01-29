@@ -29,7 +29,7 @@ class ChordDetector{
          * 
          * @return std::vector<int> which might be empty if 'hasChord == false
          */
-        std::vector<int> getChord() const;
+        std::vector<int> getChord(bool clearChord = true);
     private:
         struct NoteInfo {int note; 
                          unsigned long time;

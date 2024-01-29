@@ -11,11 +11,12 @@ void ChordDetector::addNote(int note, unsigned long time)
 {
    // check if we are ready to release a chord
    // case 1: no notes yet
-    std::cout <<"time: "<<time<<std::endl;
-   if (notes.size() == 0){
-     std::cout << "no notes" << std::endl;
-    notes.push_back({note, time});
-    return; 
+    //std::cout <<"time: "<<time<<std::endl;
+   if (notes.size() == 0)
+   {
+        std::cout << "no notes" << std::endl;
+        notes.push_back({note, time});
+        return;
    }
 
    unsigned long timeDiff = time - notes.back().time;
@@ -29,8 +30,8 @@ void ChordDetector::addNote(int note, unsigned long time)
         lastChord.push_back(info.note);
     }
     // now add a fresh note
-       notes.clear();
-         notes.push_back({note, time});
+    notes.clear();
+    notes.push_back({note, time});
     return; 
    }
    // case 3: have notes, not ready for chord
@@ -49,7 +50,12 @@ bool ChordDetector::hasChord() const
    return true; 
 }
 
-std::vector<int> ChordDetector::getChord() const 
+std::vector<int> ChordDetector::getChord(bool clearChord)
 {
-    return lastChord; 
+    auto res = lastChord;
+    if (clearChord)
+    {
+        lastChord.clear();
+    }
+    return res;
 }

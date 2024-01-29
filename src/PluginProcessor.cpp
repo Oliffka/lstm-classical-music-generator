@@ -335,11 +335,15 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
 
 std::vector<std::string> LstmMusicProcessor::extractPattern(int maxLength)
 {
-    std::vector<int> pattern;
     if(initMidiNotes.size() < maxLength)
-        return initMidiNotes;
+    {
+        assert("input length of the current song is less than required");
+        return std::vector<std::string>{};
+    }
     
-    return std::vector<std::string>(initMidiNotes.end() - maxLength, initMidiNotes.end());
+    int startIndex = juce::Random::getSystemRandom().nextInt(initMidiNotes.size() - maxLength + 1);
+    
+    return std::vector<std::string>(initMidiNotes.begin() + startIndex,initMidiNotes.begin() + startIndex + maxLength);
 }
 
 std::vector<float> LstmMusicProcessor::normalizeVector(const std::vector<int>& data, int vocabSize)
@@ -383,7 +387,6 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
     const auto songsPathStr = curMusicData.availableSongs[song];
     
     fs::path modelPath{modelPathStr};
-    //modelPath /= (style + ".model");
     
     fs::path vocabPath = modelPath.parent_path().parent_path();
     vocabPath /= (style + "_vocab.json");
@@ -406,41 +409,43 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
         return false;
     }
     
-    //lstmModel = std::make_unique<keras2cpp::Model>(Model::load(modelPath.string()));
-    //DBG("model loaded successfully");
-    
     if (!initVocabulary(vocabPath.string()))
     {
         DBG("Can't init vocabulary");
         return false;
     }
     
-    canPlayMidi = false;
-    
-    if (!openMidi(songsPathStr, lstmDepth))
+    if (!readMidi(songsPathStr))
     {
+        DBG("Can't read midi");
         return false;
     }
     
-    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, lstmDepth, notesCount, modelPath);
+    const auto patternStr = extractPattern(lstmDepth);
+    if (patternStr.size() != lstmDepth)
+    {
+        DBG("Can't extract notes pattern of the required length");
+        return false;
+    }
+    
+    auto pattern = notesToIndices(patternStr);
+    
+    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, pattern, notesCount, modelPath);
     progressThread.detach();
     
     return true;
 }
 
-void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount, const std::string& modelPath)
+void LstmMusicProcessor::runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath)
 {
     const auto model = fdeep::load_model(modelPath);
-    
-    const auto patternStr = extractPattern(lstmDepth);
-    auto pattern = notesToIndices(patternStr);
-    
+    auto curPattern = pattern;
+    canPlayMidi = false;
     outputNotes.clear();
     
     for (auto noteNumber = 0; noteNumber< notesCount; noteNumber++ )
     {
-        
-        auto model_input = normalizeVector(pattern, vocabSize);
+        auto model_input = normalizeVector(curPattern, vocabSize);
         
         const auto best_prediction = model.predict_class_with_confidence ({fdeep::tensor(fdeep::tensor_shape(static_cast<std::size_t>(model_input.size()), static_cast<std::size_t>(1)), model_input)}).first;
 
@@ -448,8 +453,8 @@ void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount, const std:
         
         std::cout << "output index: " << best_prediction << "; note: " << vocabReverse[best_prediction]<<std::endl;
         
-        pattern.push_back(best_prediction);
-        pattern.erase(pattern.begin());
+        curPattern.push_back(best_prediction);
+        curPattern.erase(curPattern.begin());
         
         if (noteGeneratedCallback)
         {
@@ -586,28 +591,54 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
     }
 }
 
-bool LstmMusicProcessor::openMidi(const std::string& path, int depth)
+bool LstmMusicProcessor::readMidi(const std::string& path)
 {
-    /*juce::FileChooser chooser("Select a MIDI file...",
-                              juce::File::getSpecialLocation(juce::File::userHomeDirectory),
-                              "*.mid;*.midi");*/
-
-    //if (chooser.browseForFileToOpen())
-    //{
-        juce::File file(path);
-        DBG("The file is opened");
+    juce::File file(path);
+    
+    // Inside the openFile method after loading the MIDI file
+    juce::MidiFile midiFile;
+    auto midiStream = juce::FileInputStream(file);
+    
+    if (!midiFile.readFrom(midiStream))
+        return;
+    
+    initMidiNotes.clear();
+    
+    const auto track = midiFile.getTrack(0);
+    // Process MIDI file
+    int totalEvents = track->getNumEvents();
+    
+    for (auto midiIndex = 0; midiIndex < totalEvents; midiIndex
+         ++)
+    {
+        const auto event = track->getEventPointer(midiIndex);
         
-        // Inside the openFile method after loading the MIDI file
-        juce::MidiFile midiFile;
-        auto midiStream = juce::FileInputStream(file);
-        
-        midiFile.readFrom(midiStream);
+        if (event != nullptr && event->message.isNoteOn())
+        {
+            auto curMessage = event->message;
+            DBG(juce::String(curMessage.getNoteNumber()) + "; time = " + juce::String(curMessage.getTimeStamp()));
+           // DBG(curMessage.getTimeStamp());
+            chordDetect.addNote(curMessage.getNoteNumber(), curMessage.getTimeStamp());
+            
+            auto notes = learnNotes();
+            if (!notes.empty())
+            {
+                if (vocabulary.find(notes) != vocabulary.end())
+                {
+                    DBG("notes added: " + notes);
+                    initMidiNotes.push_back(notes);
+                }
+                else
+                {
+                    DBG("!!!Chord not found: " + notes);
+                }
+            }
+        }
+    }
+    return true;
+}
 
-        const auto track = midiFile.getTrack(0);
-        // Process MIDI file to find a sequence of 30 notes from a random place
-        int totalEvents = track->getNumEvents();
-        int startIndex = juce::Random::getSystemRandom().nextInt(totalEvents - depth); // Choose a random starting point
-
+/*
         auto i = startIndex;
         auto midiIndex = startIndex;
         while(i < startIndex + depth && midiIndex < totalEvents)
@@ -637,41 +668,12 @@ bool LstmMusicProcessor::openMidi(const std::string& path, int depth)
                         DBG("!!!Chord not found: " + notes);
                     }
                 }
-                // Extract and process MIDI note information
-                // Access note information using event->message
-                // Example: event->message.getNoteNumber(), event->message.getVelocity(), etc.
             }
             midiIndex++;
         }
-
-        // Load and process the selected MIDI file
-        // Read MIDI data from the selected file
-        // Use MIDI classes in JUCE or a library like RtMidi to read MIDI data
-    //}
     return true;
-}
-/*for note_index in range(10):
-        prediction_input = np.reshape(pattern, (1, len(pattern), 1))
-        prediction_input = prediction_input / float(n_vocab)
+}*/
 
-        prediction = model.predict(prediction_input, verbose=0)
-
-        index = np.argmax(prediction)
-        result = int_to_note[index]
-        prediction_output.append(result)
-
-        pattern.append(index)
-        pattern = pattern[1:len(pattern)]
-        print("current note number: ", note_index)
-
-        if (note_index < 5):
-          print("prediction_input.shape: ", prediction_input.shape)
-          print("prediction_input", prediction_input)
-          print("prediction: ", prediction)
-          print("prediction_output: ", prediction_output)
-
-
-    return prediction_output*/
 //==============================================================================
 bool LstmMusicProcessor::hasEditor() const
 {
