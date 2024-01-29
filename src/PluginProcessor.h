@@ -12,13 +12,8 @@
 #include <juce_audio_processors/juce_audio_processors.h>
 #include <juce_audio_utils/juce_audio_utils.h>
 #include "ChordDetector.h"
-#include "model.h"
 #include <memory>
 #include <map>
-
-using keras2cpp::Model;
-using keras2cpp::Tensor;
-
 
 //==============================================================================
 /**
@@ -117,7 +112,6 @@ private:
     progressCallback noteGeneratedCallback;
     voidCallback generationCompletedCallback;
     
-    std::unique_ptr<keras2cpp::Model> lstmModel;
     std::map<std::string, MusicData> musicDict;
     std::string currentStyle = "mozart";
     
@@ -131,7 +125,7 @@ private:
     std::vector<std::string> extractPattern(int maxLength);
     std::vector<float> normalizeVector(const std::vector<int>& data, int vocabSize);
     
-    void runGeneration(int lstmDepth, int notesCount);
+    void runGeneration(int lstmDepth, int notesCount, const std::string& modelPath);
     void writeMidiFile(const std::string& midiPath);
     juce::MidiMessageSequence buildMidiSequence();
     bool initVocabulary(const std::string& path);

@@ -32,7 +32,6 @@ juce_add_plugin(lstm_classical_music_generator
 # you can do this since we are not using torch any more
 juce_generate_juce_header(lstm_classical_music_generator)
 
-include_directories(lstm_classical_music_generator PRIVATE "./3rdparty/keras2cpp/src/")
 include_directories(lstm_classical_music_generator PRIVATE "./models/")
 
 target_sources(lstm_classical_music_generator
@@ -41,23 +40,6 @@ target_sources(lstm_classical_music_generator
     src/PluginProcessor.cpp
     src/ChordDetector.cpp
     src/MainGui.cpp
-    
-    3rdparty/keras2cpp/src/utils.cc
-    3rdparty/keras2cpp/src/baseLayer.cc
-    3rdparty/keras2cpp/src/layers/activation.cc
-    3rdparty/keras2cpp/src/layers/conv1d.cc
-    3rdparty/keras2cpp/src/layers/conv2d.cc
-    3rdparty/keras2cpp/src/layers/dense.cc
-    3rdparty/keras2cpp/src/layers/elu.cc
-    3rdparty/keras2cpp/src/layers/embedding.cc
-    3rdparty/keras2cpp/src/layers/flatten.cc
-    3rdparty/keras2cpp/src/layers/lstm.cc
-    3rdparty/keras2cpp/src/layers/locally1d.cc
-    3rdparty/keras2cpp/src/layers/locally2d.cc
-    3rdparty/keras2cpp/src/layers/maxPooling2d.cc
-    3rdparty/keras2cpp/src/layers/batchNormalization.cc
-    3rdparty/keras2cpp/src/model.cc
-    3rdparty/keras2cpp/src/tensor.cc
    )
 
 

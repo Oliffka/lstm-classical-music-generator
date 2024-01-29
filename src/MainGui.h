@@ -124,7 +124,6 @@ private:
     std::unique_ptr<juce::Label> lblProgress;
     std::unique_ptr<juce::ProgressBar> barProgress;
 
-
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (MainGui)
 };

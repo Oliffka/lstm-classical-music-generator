@@ -9,6 +9,7 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 #include "MainGui.h"
+#include <filesystem>
 
 namespace fs = std::filesystem;
 //==============================================================================
@@ -121,6 +122,7 @@ void LstmMusicEditor::generateBtnClicked()
     
     if (res)
     {
+        updateProgress(0, 0);
         disableUI();
     }
 }
@@ -160,7 +162,7 @@ void LstmMusicEditor::saveBtnClicked()
 void LstmMusicEditor::chooseModelsPathClicked()
 {
     const auto modelPath = askModelPath();
-    if (!fs::exists(modelPath))
+    if (!fs::exists(fs::path{modelPath}))
         return;
     
     this->audioProcessor.initModels(modelPath);
@@ -195,24 +197,6 @@ void LstmMusicEditor::updateProgress(int numGenerated, int numTotal)
 
 void LstmMusicEditor::buttonClicked(juce::Button* btn)
 {
-    /*
-    if (btn == &resetButton){
-        this->audioProcessor.generateMelody();
-        //this->audioProcessor.openMidi();
-    }
-    if (btn == &isLearningButton){
-        // if processor is learning, set to 'is not learning'
-        if (this->audioProcessor.isLearning()){
-            this->audioProcessor.stopLearning();
-            // make the button off
-            isLearningButton.setButtonText("Start learning");
-        }
-        else {
-            this->audioProcessor.startLearning();
-            //isLearningButton.setButtonText("Machine is learning");
-            isLearningButton.setButtonText("Stop learning");
-        }
-    }*/
 }
 
 std::string LstmMusicEditor::askModelPath()

@@ -16,6 +16,8 @@
 #include <fstream>
 #include <nlohmann/json.hpp>
 
+#include <fdeep/fdeep.hpp>
+
 using json = nlohmann::json;
 namespace fs = std::filesystem;
   
@@ -57,7 +59,6 @@ void LstmMusicProcessor::setGenerationCompletedCallback(voidCallback callback)
 
 void LstmMusicProcessor::initModels(const std::string& modelPath)
 {
-    //const auto modelPath = askModelPath();//"/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/models";
     if (!fs::exists(modelPath))
         return;
 
@@ -69,8 +70,8 @@ void LstmMusicProcessor::initModels(const std::string& modelPath)
         {
             fs::path entryPath(entry);
             
-            std::string folderName = entryPath.filename().string();
-            std::cout << folderName << std::endl;
+            std::string styleFolderName = entryPath.filename().string();
+            std::cout << styleFolderName << std::endl;
             
             MusicData currentData;
             for (const auto & curPath : fs::directory_iterator(entry))
@@ -98,12 +99,16 @@ void LstmMusicProcessor::initModels(const std::string& modelPath)
                         }
                         if (lstmDepth > 0)
                         {
-                            currentData.availableLstmModels.insert({lstmDepth, curPath.path()});
+                            auto curModelPath = curFolder;
+                            curModelPath /= (styleFolderName + "_" + folderName + ".json");
+                            
+                            //auto curModelPath = curPath / (styleFolderName + "_" + folderName + ".json");
+                            currentData.availableLstmModels.insert({lstmDepth, curModelPath.string()});
                         }
                     }
                 }
             }
-            musicDict.insert({folderName, currentData});
+            musicDict.insert({styleFolderName, currentData});
         }
     }
 }
@@ -323,7 +328,6 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             songIsFinishedCallback();
             stopPlayingMidi();
         }
-
     }
 
     time = (time + numSamples) % noteDuration;
@@ -379,7 +383,7 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
     const auto songsPathStr = curMusicData.availableSongs[song];
     
     fs::path modelPath{modelPathStr};
-    modelPath /= (style + ".model");
+    //modelPath /= (style + ".model");
     
     fs::path vocabPath = modelPath.parent_path().parent_path();
     vocabPath /= (style + "_vocab.json");
@@ -402,8 +406,8 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
         return false;
     }
     
-    lstmModel = std::make_unique<keras2cpp::Model>(Model::load(modelPath.string()));
-    DBG("model loaded successfully");
+    //lstmModel = std::make_unique<keras2cpp::Model>(Model::load(modelPath.string()));
+    //DBG("model loaded successfully");
     
     if (!initVocabulary(vocabPath.string()))
     {
@@ -418,15 +422,16 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
         return false;
     }
     
-    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, lstmDepth, notesCount);
+    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, lstmDepth, notesCount, modelPath);
     progressThread.detach();
-    //std::async(std::launch::async, &LstmMusicProcessor::runGeneration, this, lstmDepth, notesCount);
     
     return true;
 }
 
-void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount)
+void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount, const std::string& modelPath)
 {
+    const auto model = fdeep::load_model(modelPath);
+    
     const auto patternStr = extractPattern(lstmDepth);
     auto pattern = notesToIndices(patternStr);
     
@@ -437,18 +442,13 @@ void LstmMusicProcessor::runGeneration(int lstmDepth, int notesCount)
         
         auto model_input = normalizeVector(pattern, vocabSize);
         
-        Tensor in{model_input.size(), 1};
-        in.data_ = model_input;
-        
-        Tensor out = (*lstmModel)(in);
-        const auto& predictions = out.data_;
-        int maxIndex = std::distance(predictions.begin(), std::max_element(   predictions.begin(), predictions.end()));
+        const auto best_prediction = model.predict_class_with_confidence ({fdeep::tensor(fdeep::tensor_shape(static_cast<std::size_t>(model_input.size()), static_cast<std::size_t>(1)), model_input)}).first;
 
-        outputNotes.push_back(maxIndex);
+        outputNotes.push_back(best_prediction);
         
-        std::cout << "output index: " << maxIndex << "; note: " << vocabReverse[maxIndex]<<std::endl;
+        std::cout << "output index: " << best_prediction << "; note: " << vocabReverse[best_prediction]<<std::endl;
         
-        pattern.push_back(maxIndex);
+        pattern.push_back(best_prediction);
         pattern.erase(pattern.begin());
         
         if (noteGeneratedCallback)
