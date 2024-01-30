@@ -82,7 +82,11 @@ public:
     
     void stopPlayingMidi();
     
-    bool readMidi(const std::string& path);
+    void playInitSong(const std::string& style, const std::string& song);
+    
+    void playGeneratedSong();
+    
+    bool readMidi(const std::string& path, bool considerVocab = true);
     
     void setCurrentStyle(const std::string& style);
     
@@ -140,6 +144,8 @@ private:
     
     std::vector<int> outputNotes;
     std::vector<std::string> outputNotesStr;
+    std::vector<std::string> notesToPlay;
+    
     
     int noteDuration; //note duration in samples
     int currentNote = 0;

@@ -365,15 +365,17 @@ void MainGui::buttonClicked (juce::Button* buttonThatWasClicked)
         {
             if (playBtnClickedCallback)
                 playBtnClickedCallback();
-            btnPlay->setTooltip (TRANS("stop playing newly generated musical piece\n"));
+            btnPlay->setTooltip (TRANS("stop playing newly generated musical piece"));
             btnPlay->setButtonText (TRANS("Stop"));
+            btnPlayStyleSong->setEnabled(false);
         }
         else
         {
             if (stopBtnClickedCallback)
                 stopBtnClickedCallback();
-            btnPlay->setTooltip (TRANS("play newly generated musical piece\n"));
+            btnPlay->setTooltip (TRANS("play newly generated musical piece"));
             btnPlay->setButtonText (TRANS("Play"));
+            btnPlayStyleSong->setEnabled(true);
         }
         isPlaying = !isPlaying;
         //[/UserButtonCode_btnPlay]
@@ -388,8 +390,23 @@ void MainGui::buttonClicked (juce::Button* buttonThatWasClicked)
     else if (buttonThatWasClicked == btnPlayStyleSong.get())
     {
         //[UserButtonCode_btnPlayStyleSong] -- add your button handler code here..
-        if (playInitSongBtnClickedCallback)
-            playInitSongBtnClickedCallback();
+        if (!isPlaying)
+        {
+            if (playInitSongBtnClickedCallback)
+                playInitSongBtnClickedCallback();
+            btnPlayStyleSong->setTooltip (TRANS("stop playing musical piece\n"));
+            btnPlayStyleSong->setButtonText (TRANS("Stop"));
+            btnPlay->setEnabled(false);
+        }
+        else
+        {
+            if (stopBtnClickedCallback)
+                stopBtnClickedCallback();
+            btnPlayStyleSong->setTooltip (TRANS("play musical piece\n"));
+            btnPlayStyleSong->setButtonText (TRANS("Play"));
+            btnPlay->setEnabled(true);
+        }
+        isPlaying = !isPlaying;
         //[/UserButtonCode_btnPlayStyleSong]
     }
     else if (buttonThatWasClicked == btnChoosePath.get())
@@ -514,8 +531,14 @@ void MainGui::onSongIsFinished()
     {
         MessageManager::callAsync(
                   [this] () {
-                      this->btnPlay->setTooltip (TRANS("play newly generated musical piece\n"));
+                      this->btnPlay->setTooltip (TRANS("play newly generated musical piece"));
                       this->btnPlay->setButtonText (TRANS("Play"));
+                      
+                      btnPlayStyleSong->setTooltip (TRANS("play musical piece"));
+                      btnPlayStyleSong->setButtonText (TRANS("Play"));
+                      
+                      btnPlayStyleSong->setEnabled(true);
+                      btnPlay->setEnabled(true);
                   });
                                   
         isPlaying = false;

@@ -302,9 +302,9 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             lastNotes = "";
         }
 
-        if (currentNote < outputNotesStr.size())
+        if (currentNote < notesToPlay.size())
         {
-            lastNotes = outputNotesStr[currentNote];
+            lastNotes = notesToPlay[currentNote];
             auto notesArray = stringToNotesArray(lastNotes);
             if (notesArray.size() > 1)
                 DBG("Here is the chord!!");
@@ -477,6 +477,28 @@ void LstmMusicProcessor::saveMidi(const std::string& midiPath)
     writeMidiFile(midiPath);
 }
 
+void LstmMusicProcessor::playGeneratedSong()
+{
+    notesToPlay = outputNotesStr;
+    playMidi();
+}
+
+void LstmMusicProcessor::playInitSong(const std::string& style, const std::string& song)
+{
+    auto curMusicData = musicDict[style];
+    const auto songsPathStr = curMusicData.availableSongs[song];
+    
+    if (!fs::exists(fs::path{songsPathStr}))
+    {
+        assert("The chosen song path doesn't exist!");
+        return;
+    }
+    
+    readMidi(songsPathStr, false);
+    notesToPlay = initMidiNotes;
+    playMidi();
+}
+
 void LstmMusicProcessor::playMidi()
 {
     canPlayMidi = true;
@@ -595,7 +617,7 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
     }
 }
 
-bool LstmMusicProcessor::readMidi(const std::string& path)
+bool LstmMusicProcessor::readMidi(const std::string& path, bool considerVocab)
 {
     juce::File file(path);
     
@@ -626,13 +648,20 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
             auto notes = learnNotes();
             if (!notes.empty())
             {
-                if (vocabulary.find(notes) != vocabulary.end())
+                if (considerVocab)
                 {
-                    initMidiNotes.push_back(notes);
+                    if (vocabulary.find(notes) != vocabulary.end())
+                    {
+                        initMidiNotes.push_back(notes);
+                    }
+                    else
+                    {
+                        DBG("!!!Chord not found: " + notes);
+                    }
                 }
                 else
                 {
-                    DBG("!!!Chord not found: " + notes);
+                    initMidiNotes.push_back(notes);
                 }
             }
         }

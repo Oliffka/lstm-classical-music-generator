@@ -46,6 +46,7 @@ private:
     
     void generateBtnClicked();
     void playBtnClicked();
+    void playInitSongBtnClicked();
     void stopBtnClicked();
     void saveBtnClicked();
     void styleChanged();

@@ -24,6 +24,7 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     mainGui->setGenerateBtnClickedCallback(std::bind(&LstmMusicEditor::generateBtnClicked, this));
     
     mainGui->setPlayBtnClickedCallback(std::bind(&LstmMusicEditor::playBtnClicked, this));
+    mainGui->setPlayInitSongBtnClickedCallback(std::bind(&LstmMusicEditor::playInitSongBtnClicked, this));
     mainGui->setSaveBtnClickedCallback(std::bind(&LstmMusicEditor::saveBtnClicked, this));
     mainGui->setStopBtnClickedCallback(std::bind(&LstmMusicEditor::stopBtnClicked, this));
     mainGui->setOpenFolderClickedCallback(std::bind(&LstmMusicEditor::openFolderClicked, this));
@@ -115,7 +116,12 @@ void LstmMusicEditor::generateBtnClicked()
 
 void LstmMusicEditor::playBtnClicked()
 {
-    this->audioProcessor.playMidi();
+    this->audioProcessor.playGeneratedSong();
+}
+
+void LstmMusicEditor::playInitSongBtnClicked()
+{
+    this->audioProcessor.playInitSong(mainGui->getStyle(), mainGui->getSong());
 }
 
 void LstmMusicEditor::stopBtnClicked()
