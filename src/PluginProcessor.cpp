@@ -25,6 +25,7 @@ namespace fs = std::filesystem;
 LstmMusicProcessor::LstmMusicProcessor()
 #ifndef JucePlugin_PreferredChannelConfigurations
      : AudioProcessor (BusesProperties()
+                    .withInput("Input", juce::AudioChannelSet::mono(), true)
                      #if ! JucePlugin_IsMidiEffect
                       #if ! JucePlugin_IsSynth
                        .withInput  ("Input",  juce::AudioChannelSet::stereo(), true)
@@ -36,7 +37,6 @@ LstmMusicProcessor::LstmMusicProcessor()
 , chordDetect{100}, learningMode{false}
 {
 }
-
 
 LstmMusicProcessor::~LstmMusicProcessor()
 {
@@ -296,6 +296,8 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             for (auto& note: notesArray)
             {
                 midiMessages.addEvent(juce::MidiMessage::noteOff (1, note), offset);
+                std::cout<<"noteOff event: " <<note<< "; offset: "<<offset<<std::endl;
+
             }
             lastNotes = "";
         }
@@ -310,6 +312,7 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             for (auto& note: notesArray)
             {
                 midiMessages.addEvent(juce::MidiMessage::noteOn(1, note, (juce::uint8) 127), offset);
+                std::cout<<"noteOn event: " <<note<< "; offset: "<<offset<<std::endl;
             }
             currentNote += 1;
         }
@@ -734,8 +737,6 @@ std::vector<int> LstmMusicProcessor::stringToNotesArray(const std::string& notes
 
     juce::StringArray tokens;
     tokens.addTokens(notesStr, ".", "\"");
-    DBG("tokens size = ");
-    DBG(tokens.size());
 
     for (const auto& note : tokens)
     {

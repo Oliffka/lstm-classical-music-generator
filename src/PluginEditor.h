@@ -21,10 +21,7 @@ class LstmMusicEditor  :   public juce::AudioProcessorEditor,
                           // listen to buttons
                           public juce::Button::Listener, 
                           // listen to sliders
-                          public juce::Slider::Listener,
-                          // listen to piano keyboard widget
-                          private juce::MidiKeyboardState::Listener
-
+                          public juce::Slider::Listener
 {
 public:
     LstmMusicEditor (LstmMusicProcessor&);
@@ -36,13 +33,6 @@ public:
 
     void sliderValueChanged (juce::Slider *slider) override;
     void buttonClicked(juce::Button* btn) override;
-    
-    // from MidiKeyboardState
-    void handleNoteOn(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float
- velocity) override; 
-     // from MidiKeyboardState
-    void handleNoteOff(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float velocity) override; 
-
 
 private:
     void updateLstmDepths();

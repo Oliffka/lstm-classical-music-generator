@@ -67,20 +67,6 @@ void LstmMusicEditor::resized()
 {
     // This is generally where you'll want to lay out the positions of any
     // subcomponents in your editor..
-    /*
-    float rowHeight = getHeight()/5;
-    float colWidth = getWidth() / 3;
-    float row = 0;
-    float col = 0;
-
-
-    miniPianoKbd.setBounds(0, rowHeight*row, getWidth(), rowHeight);
-    row ++;
-    resetButton.setBounds(0, rowHeight*row, colWidth, rowHeight);
-    col ++;
-    isLearningButton.setBounds(col * colWidth, rowHeight*row, colWidth, rowHeight);*/
-    
-    
 }
 
 void LstmMusicEditor::enableUI()
@@ -212,18 +198,3 @@ std::string LstmMusicEditor::askModelPath()
     }
     return path;
 }
-
-void LstmMusicEditor::handleNoteOn(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float velocity)
-{
-    juce::MidiMessage msg1 = juce::MidiMessage::noteOn(midiChannel, midiNoteNumber, velocity);
-    audioProcessor.addMidi(msg1, 0);
-    
-}
-
-void LstmMusicEditor::handleNoteOff(juce::MidiKeyboardState *source, int midiChannel, int midiNoteNumber, float velocity)
-{
-    juce::MidiMessage msg2 = juce::MidiMessage::noteOff(midiChannel, midiNoteNumber, velocity);
-    audioProcessor.addMidi(msg2, 0); 
-}
-
-
