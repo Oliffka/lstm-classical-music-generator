@@ -429,7 +429,7 @@ bool LstmMusicProcessor::generateMelody(const std::string& style, const std::str
     }
     
     auto pattern = notesToIndices(patternStr);
-    
+
     std::thread progressThread(&LstmMusicProcessor::runGeneration, this, pattern, notesCount, modelPath);
     progressThread.detach();
     
@@ -461,6 +461,7 @@ void LstmMusicProcessor::runGeneration(const std::vector<int>& pattern, int note
             noteGeneratedCallback(noteNumber+1, notesCount);
         }
     }
+    
     outputNotesStr = indicesToNotes(outputNotes);
     if (generationCompletedCallback)
     {
@@ -600,7 +601,7 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
     auto midiStream = juce::FileInputStream(file);
     
     if (!midiFile.readFrom(midiStream))
-        return;
+        return false;
     
     initMidiNotes.clear();
     
@@ -616,8 +617,7 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
         if (event != nullptr && event->message.isNoteOn())
         {
             auto curMessage = event->message;
-            DBG(juce::String(curMessage.getNoteNumber()) + "; time = " + juce::String(curMessage.getTimeStamp()));
-           // DBG(curMessage.getTimeStamp());
+
             chordDetect.addNote(curMessage.getNoteNumber(), curMessage.getTimeStamp());
             
             auto notes = learnNotes();
@@ -625,7 +625,6 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
             {
                 if (vocabulary.find(notes) != vocabulary.end())
                 {
-                    DBG("notes added: " + notes);
                     initMidiNotes.push_back(notes);
                 }
                 else
