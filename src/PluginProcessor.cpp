@@ -550,9 +550,11 @@ bool LstmMusicProcessor::initVocabulary(const std::string& vocabPath)
     std::ifstream f(vocabPath);
     json data = json::parse(f);
 
-    for (auto& [key, value] : data.items()) 
+    this->vocabulary.clear();
+    this->vocabReverse.clear();
+    
+    for (auto& [key, value] : data.items())
     {
-        std::cout << key << " : " << value << "\n";
         this->vocabulary[key] = value;
         this->vocabReverse[value] = key;
     }

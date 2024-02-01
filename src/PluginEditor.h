@@ -8,7 +8,6 @@
 
 #pragma once
 
-//#include <JuceHeader.h>
 #include "PluginProcessor.h"
 #include <juce_gui_basics/juce_gui_basics.h>
 #include <juce_audio_utils/juce_audio_utils.h>
@@ -35,7 +34,8 @@ public:
     void buttonClicked(juce::Button* btn) override;
 
 private:
-    void updateLstmDepths();
+    //Methods for changing/updating UI state
+    void updateLstmInputLengths();
     void updateMusicalStyles();
     void updateTestSongs();
     
@@ -44,6 +44,7 @@ private:
     void enableUI();
     void disableUI();
     
+    //Handlers of the events from UI components
     void generateBtnClicked();
     void playBtnClicked();
     void playInitSongBtnClicked();
@@ -52,11 +53,15 @@ private:
     void styleChanged();
     void openFolderClicked();
     void chooseModelsPathClicked();
+    
+    //Let the user select a folder with pretrained models
     std::string askModelPath();
     
 private:
+    //smart pointer to MainGui component
     std::unique_ptr<MainGui> mainGui;
-    std::function<void(void*)> voidFunction;
+    
+    //keep the last path chosen by user to save midi
     std::string lastSavePath;
 
     // This reference is provided as a quick way for your editor to

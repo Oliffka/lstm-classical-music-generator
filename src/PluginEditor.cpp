@@ -20,7 +20,8 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     // editor's size to whatever you need it to be.
     mainGui = std::make_unique<MainGui>();
     
-    //btnClickedCallback callback = generateBtnClicked;
+    //Setting callbacks to MainGui and AudioProcessor components for signalling when
+    //important events occur
     mainGui->setGenerateBtnClickedCallback(std::bind(&LstmMusicEditor::generateBtnClicked, this));
     
     mainGui->setPlayBtnClickedCallback(std::bind(&LstmMusicEditor::playBtnClicked, this));
@@ -38,17 +39,19 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     addAndMakeVisible (mainGui.get());
     setSize (mainGui->getWidth(), mainGui->getHeight());
     
+    //Make sure that the UI components are in the initial state in the beginning
     updateProgress(0, 0);
+    updateMusicalStyles();
+    updateLstmInputLengths();
+    updateTestSongs();
 
+    //Show the hint if models weren't loaded before
     if (!audioProcessor.modelsAreLoaded)
     {
         juce::AlertWindow::showMessageBoxAsync( juce::MessageBoxIconType::InfoIcon,
                                                TRANS("How to start"),
                                                TRANS("Before you start, please choose the folder with the models.\nYou can find the button in the \'parameters\' block." ));
     }
-    updateMusicalStyles();
-    updateLstmDepths();
-    updateTestSongs();
 }
 
 LstmMusicEditor::~LstmMusicEditor()
@@ -58,12 +61,6 @@ LstmMusicEditor::~LstmMusicEditor()
 //==============================================================================
 void LstmMusicEditor::paint (juce::Graphics& g)
 {
-    // (Our component is opaque, so we must completely fill the background with a solid colour)
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
-
-   g.setColour (juce::Colours::white);
-   g.setFont (15.0f);
-   g.drawFittedText ("v0.002", getLocalBounds(), juce::Justification::centred, 1);
 }
 
 void LstmMusicEditor::resized()
@@ -82,7 +79,7 @@ void LstmMusicEditor::disableUI()
     mainGui->enableUI(false);
 }
 
-void LstmMusicEditor::updateLstmDepths()
+void LstmMusicEditor::updateLstmInputLengths()
 {
     const auto depths = audioProcessor.getInputLengths();
     mainGui->fillInputLengthCmb(depths);
@@ -170,7 +167,7 @@ void LstmMusicEditor::styleChanged()
 {
     const auto currentStyle = mainGui->getStyle();
     this->audioProcessor.setCurrentStyle(currentStyle);
-    updateLstmDepths();
+    updateLstmInputLengths();
     updateTestSongs();
 }
 

@@ -163,8 +163,7 @@ MainGui::MainGui ()
     btnPlayStyleSong->setBounds (342, 136, 104, 40);
 
     lblStyleDescription.reset (new juce::Label ("lblStyleDescription",
-                                                TRANS("Which composer\'s style do you want to use for your new song? Choose composer and initial musical piece\n"
-                                                "\n")));
+                                                TRANS("Select a composer and an initial musical piece for the generation of a new song in the chosen musical style.")));
     addAndMakeVisible (lblStyleDescription.get());
     lblStyleDescription->setFont (juce::Font (15.00f, juce::Font::plain).withTypefaceStyle ("Regular"));
     lblStyleDescription->setJustificationType (juce::Justification::centredLeft);
@@ -344,6 +343,18 @@ void MainGui::buttonClicked (juce::Button* buttonThatWasClicked)
     if (buttonThatWasClicked == btnGenerate.get())
     {
         //[UserButtonCode_btnGenerate] -- add your button handler code here..
+        if (isPlaying)
+        {
+            if (stopBtnClickedCallback)
+                stopBtnClickedCallback();
+            btnPlay->setTooltip (TRANS("play newly generated musical piece"));
+            btnPlay->setButtonText (TRANS("Play"));
+            btnPlayStyleSong->setTooltip (TRANS("play musical piece\n"));
+            btnPlayStyleSong->setButtonText (TRANS("Play"));
+            btnPlay->setEnabled(true);
+            btnPlayStyleSong->setEnabled(true);
+        }
+        
         if (generateBtnClickedCallback)
             generateBtnClickedCallback();
         //[/UserButtonCode_btnGenerate]
