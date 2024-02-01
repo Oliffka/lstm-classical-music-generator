@@ -60,8 +60,6 @@ public:
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-    /** add some midi to be played at the sent sample offset*/
-    void addMidi(juce::MidiMessage msg, int sampleOffset);
     /**
      * @brief reset the markov model
      * 
@@ -86,7 +84,7 @@ public:
     
     void playGeneratedSong();
     
-    bool readMidi(const std::string& path, bool considerVocab = true);
+    bool readMidi(const std::string& path);
     
     void setCurrentStyle(const std::string& style);
     
@@ -102,7 +100,8 @@ public:
     
     using progressCallback = std::function<void(int, int)>;
     void setProgressCallback(progressCallback);
-
+    
+    bool modelsAreLoaded{false};
 private:
     struct MusicData
     {
@@ -117,7 +116,7 @@ private:
     voidCallback generationCompletedCallback;
     
     std::map<std::string, MusicData> musicDict;
-    std::string currentStyle = "mozart";
+    std::string currentStyle;
     
     std::map<std::string, int> vocabulary;
     std::map<int, std::string> vocabReverse;
@@ -131,15 +130,20 @@ private:
     
     void runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath);
     void writeMidiFile(const std::string& midiPath);
-    juce::MidiMessageSequence buildMidiSequence();
     bool initVocabulary(const std::string& path);
+    void buildGeneratedMidiToPlay();
     
     std::vector<int> notesToIndices(const std::vector<std::string>&);
     std::vector<std::string> indicesToNotes(const std::vector<int>&);
     
-    /** stores messages added from the addMidi function*/
-    juce::MidiBuffer midiToProcess;
-    juce::MidiBuffer midiToPlay;
+    std::vector<juce::MidiMessage> initMidiToPlay;
+    std::vector<juce::MidiMessage> generatedMidiToPlay;
+    std::vector<juce::MidiMessage>& midiToPlay = initMidiToPlay;
+    
+    //ugly way to indicate that is no last NoteOn event
+    juce::MidiMessage lastNoteOn = juce::MidiMessage::endOfTrack();
+    
+    
     std::vector<std::string> initMidiNotes;
     
     std::vector<int> outputNotes;
@@ -147,19 +151,21 @@ private:
     std::vector<std::string> notesToPlay;
     
     
-    int noteDuration; //note duration in samples
     int currentNote = 0;
     std::string lastNotes{""};
     int time = 0;
-    unsigned long elapsedSamples;
+    
+    unsigned long elapsedSamples = 0;
+    double sampleRate = 0.0f;
     
     ChordDetector chordDetect;
-
+    
+    const double msecPerTick = 0.005;
+    const int ticksPerQuarterNote = 96;
+    const int noteLengthInTicks = 56;
     
     // add the notes stored in the chord detector to the model
     std::string learnNotes();
-
-        
     /**
      * @brief converts a vector of midi note values to a single string representation
      * 

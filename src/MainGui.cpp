@@ -30,10 +30,7 @@
 MainGui::MainGui ()
 {
     //[Constructor_pre] You can add your own custom stuff here..
-    //juce::Colour baseColor = juce::Colours::silver; // Base metallic color
-    //silverGradient = juce::ColourGradient(baseColor.withBrightness(0.2f), 0.0f, 0.0f, baseColor.withBrightness(0.8f), static_cast<float>(getWidth()), static_cast<float>(getHeight()), true);
     //[/Constructor_pre]
-
     btnGenerate.reset (new juce::TextButton ("btnGenerate"));
     addAndMakeVisible (btnGenerate.get());
     btnGenerate->setButtonText (TRANS("Generate"));
@@ -55,9 +52,6 @@ MainGui::MainGui ()
     cmbStyle->setJustificationType (juce::Justification::centredLeft);
     cmbStyle->setTextWhenNothingSelected (juce::String());
     cmbStyle->setTextWhenNoChoicesAvailable (TRANS("(no choices)"));
-    cmbStyle->addItem (TRANS("Mozart"), 1);
-    cmbStyle->addItem (TRANS("Vivaldi"), 2);
-    cmbStyle->addItem (TRANS("SteveWonder"), 3);
     cmbStyle->addListener (this);
 
     cmbStyle->setBounds (32, 72, 152, 24);
@@ -68,9 +62,6 @@ MainGui::MainGui ()
     cmbSongs->setJustificationType (juce::Justification::centredLeft);
     cmbSongs->setTextWhenNothingSelected (juce::String());
     cmbSongs->setTextWhenNoChoicesAvailable (TRANS("(no choices)"));
-    cmbSongs->addItem (TRANS("song1"), 1);
-    cmbSongs->addItem (TRANS("song2"), 2);
-    cmbSongs->addItem (TRANS("song3"), 3);
     cmbSongs->addListener (this);
 
     cmbSongs->setBounds (33, 144, 295, 24);
@@ -108,12 +99,12 @@ MainGui::MainGui ()
 
     sliderLen.reset (new juce::Slider ("sliderLen"));
     addAndMakeVisible (sliderLen.get());
-    sliderLen->setRange (10, 500, 1);
+    sliderLen->setRange (20, 200, 1);
     sliderLen->setSliderStyle (juce::Slider::LinearBar);
     sliderLen->setTextBoxStyle (juce::Slider::TextBoxLeft, true, 80, 20);
     sliderLen->addListener (this);
 
-    sliderLen->setBounds (160, 334, 265, 24);
+    sliderLen->setBounds (190, 334, 239, 24);
 
     lblSongLen.reset (new juce::Label ("lblSongLen",
                                        TRANS("How many notes to generate:\n")));
@@ -125,7 +116,7 @@ MainGui::MainGui ()
     lblSongLen->setColour (juce::TextEditor::textColourId, juce::Colours::black);
     lblSongLen->setColour (juce::TextEditor::backgroundColourId, juce::Colour (0x00000000));
 
-    lblSongLen->setBounds (158, 294, 266, 32);
+    lblSongLen->setBounds (188, 294, 266, 32);
 
     cmbDepth.reset (new juce::ComboBox ("cmbDepth"));
     addAndMakeVisible (cmbDepth.get());
@@ -139,10 +130,10 @@ MainGui::MainGui ()
     cmbDepth->addItem (TRANS("100"), 3);
     cmbDepth->addListener (this);
 
-    cmbDepth->setBounds (48, 334, 96, 24);
+    cmbDepth->setBounds (48, 334, 130, 24);
 
     lblDepth.reset (new juce::Label ("lblDepth",
-                                     TRANS("LSTM Depth:")));
+                                     TRANS("LSTM input length:")));
     addAndMakeVisible (lblDepth.get());
     lblDepth->setFont (juce::Font (15.00f, juce::Font::plain).withTypefaceStyle ("Regular"));
     lblDepth->setJustificationType (juce::Justification::centredLeft);
@@ -150,7 +141,7 @@ MainGui::MainGui ()
     lblDepth->setColour (juce::TextEditor::textColourId, juce::Colours::black);
     lblDepth->setColour (juce::TextEditor::backgroundColourId, juce::Colour (0x00000000));
 
-    lblDepth->setBounds (48, 294, 96, 32);
+    lblDepth->setBounds (48, 294, 130, 32);
 
     btnSave.reset (new juce::TextButton ("btnSave"));
     addAndMakeVisible (btnSave.get());
@@ -286,6 +277,7 @@ MainGui::MainGui ()
 
     //[Constructor] You can add your own custom stuff here..
     txtPath->setEnabled(false);
+    sliderLen->setValue(50);
     //[/Constructor]
 }
 

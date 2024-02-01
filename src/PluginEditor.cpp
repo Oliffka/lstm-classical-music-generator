@@ -40,10 +40,12 @@ LstmMusicEditor::LstmMusicEditor (LstmMusicProcessor& p)
     
     updateProgress(0, 0);
 
-    juce::AlertWindow::showMessageBoxAsync( juce::MessageBoxIconType::InfoIcon,
-    TRANS("How to start"),
-    TRANS("Before you start, please choose the folder with the models.\nYou can find the button in the \'parameters\' block." ));
-    
+    if (!audioProcessor.modelsAreLoaded)
+    {
+        juce::AlertWindow::showMessageBoxAsync( juce::MessageBoxIconType::InfoIcon,
+                                               TRANS("How to start"),
+                                               TRANS("Before you start, please choose the folder with the models.\nYou can find the button in the \'parameters\' block." ));
+    }
     updateMusicalStyles();
     updateLstmDepths();
     updateTestSongs();

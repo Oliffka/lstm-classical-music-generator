@@ -102,7 +102,6 @@ void LstmMusicProcessor::initModels(const std::string& modelPath)
                             auto curModelPath = curFolder;
                             curModelPath /= (styleFolderName + "_" + folderName + ".json");
                             
-                            //auto curModelPath = curPath / (styleFolderName + "_" + folderName + ".json");
                             currentData.availableLstmModels.insert({lstmDepth, curModelPath.string()});
                         }
                     }
@@ -111,6 +110,7 @@ void LstmMusicProcessor::initModels(const std::string& modelPath)
             musicDict.insert({styleFolderName, currentData});
         }
     }
+    modelsAreLoaded = true;
 }
 
 std::map<std::string, std::string> LstmMusicProcessor::getSongs(const std::string& path)
@@ -238,10 +238,11 @@ void LstmMusicProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     // here we know the sample rate so can set the
     // maxinterval properly on the chord detector
     // 0.5ms seems to be about right
-    double maxIntervalInSamples = sampleRate * 0.001; // 1ms
+    this->sampleRate = sampleRate;
+    double maxIntervalSecs = 0.001; // 1ms
     //std::cout << "Max interval in samples " << maxIntervalInSamples << " or " << (maxIntervalInSamples * 96000 * 1000) << "ms";
-    chordDetect = ChordDetector((unsigned long) maxIntervalInSamples);
-    noteDuration = static_cast<int> (std::ceil (sampleRate * 0.25f));
+    chordDetect = ChordDetector((unsigned long) maxIntervalSecs);
+    elapsedSamples = 0;
 }
 
 void LstmMusicProcessor::releaseResources()
@@ -281,59 +282,50 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     midiMessages.clear();
     if (!canPlayMidi)
     {
+        if (lastNoteOn.isNoteOn())
+        {
+            auto noteOff = juce::MidiMessage::noteOff(1, lastNoteOn.getNoteNumber());
+            midiMessages.addEvent(noteOff, 0);
+        }
         return;
     }
     
     auto numSamples = buffer.getNumSamples();
     
-    if ((time + numSamples) >= noteDuration)
+    if (currentNote < midiToPlay.size())
     {
-        auto offset = juce::jmax (0, juce::jmin ((int) (noteDuration - time), numSamples - 1));
-
-        if (lastNotes != "")
+        auto curMidiMessage = midiToPlay[currentNote];
+        auto curTimestampInSamples = curMidiMessage.getTimeStamp() * sampleRate;
+        
+        while (elapsedSamples + numSamples > curTimestampInSamples)
         {
-            auto notesArray = stringToNotesArray(lastNotes);
-            for (auto& note: notesArray)
+            auto offset = juce::jmax (0, int(curTimestampInSamples - elapsedSamples));
+            assert(offset >=0  && offset < numSamples);
+                
+            midiMessages.addEvent(curMidiMessage, offset);
+            if (curMidiMessage.isNoteOn())
             {
-                midiMessages.addEvent(juce::MidiMessage::noteOff (1, note), offset);
-                std::cout<<"noteOff event: " <<note<< "; offset: "<<offset<<std::endl;
-
-            }
-            lastNotes = "";
-        }
-
-        if (currentNote < notesToPlay.size())
-        {
-            lastNotes = notesToPlay[currentNote];
-            auto notesArray = stringToNotesArray(lastNotes);
-            if (notesArray.size() > 1)
-                DBG("Here is the chord!!");
-            
-            for (auto& note: notesArray)
-            {
-                midiMessages.addEvent(juce::MidiMessage::noteOn(1, note, (juce::uint8) 127), offset);
-                std::cout<<"noteOn event: " <<note<< "; offset: "<<offset<<std::endl;
-            }
-            currentNote += 1;
-        }
-        else if (songIsFinishedCallback)
-        {
-            if (lastNotes != "")
-            {
-                auto notesArray = stringToNotesArray(lastNotes);
-                for (auto& note: notesArray)
-                {
-                    midiMessages.addEvent(juce::MidiMessage::noteOff (1, note), offset);
-                }
-                lastNotes = "";
+                lastNoteOn = curMidiMessage;
             }
             
-            songIsFinishedCallback();
-            stopPlayingMidi();
+            currentNote++;
+            
+            std::cout<<"note: " <<curMidiMessage.getNoteNumber()<< "; offset: "<<offset<<std::endl;
+            
+            if (currentNote >= midiToPlay.size())
+            {
+                songIsFinishedCallback();
+                stopPlayingMidi();
+            }
+            else
+            {
+                curMidiMessage = midiToPlay[currentNote];
+                curTimestampInSamples = curMidiMessage.getTimeStamp() * sampleRate;
+            }
         }
     }
-
-    time = (time + numSamples) % noteDuration;
+    
+    elapsedSamples  += numSamples;
 }
 
 std::vector<std::string> LstmMusicProcessor::extractPattern(int maxLength)
@@ -444,7 +436,9 @@ void LstmMusicProcessor::runGeneration(const std::vector<int>& pattern, int note
     const auto model = fdeep::load_model(modelPath);
     auto curPattern = pattern;
     canPlayMidi = false;
+    
     outputNotes.clear();
+    generatedMidiToPlay.clear();
     
     for (auto noteNumber = 0; noteNumber< notesCount; noteNumber++ )
     {
@@ -479,8 +473,44 @@ void LstmMusicProcessor::saveMidi(const std::string& midiPath)
 
 void LstmMusicProcessor::playGeneratedSong()
 {
-    notesToPlay = outputNotesStr;
+    buildGeneratedMidiToPlay();
+    midiToPlay = generatedMidiToPlay;
     playMidi();
+}
+
+void LstmMusicProcessor::buildGeneratedMidiToPlay()
+{
+    if (generatedMidiToPlay.empty())
+    {
+        float interval = noteLengthInTicks;
+        float start = 0;
+        
+        auto notesStr = indicesToNotes(outputNotes);
+        for (auto noteStr: notesStr)
+        {
+            auto notes = stringToNotesArray(noteStr);
+            
+            if (notes.size() > 1)
+                DBG("Here is the chord!!");
+            
+            for (auto& note: notes)
+            {
+                auto timestamp = start * msecPerTick;
+
+                // Create a MIDI message for note-on event
+                juce::MidiMessage noteOnMessage = juce::MidiMessage::noteOn(1, note, 1.0f);
+                noteOnMessage.setTimeStamp(timestamp);
+                generatedMidiToPlay.push_back(noteOnMessage);
+                
+                // Create a MIDI message for note-off event
+                timestamp = (start + interval)* msecPerTick;
+                juce::MidiMessage noteOffMessage = juce::MidiMessage::noteOff(1, note);
+                noteOffMessage.setTimeStamp(timestamp);
+                generatedMidiToPlay.push_back(noteOffMessage);
+            }
+            start += interval;
+        }
+    }
 }
 
 void LstmMusicProcessor::playInitSong(const std::string& style, const std::string& song)
@@ -494,13 +524,14 @@ void LstmMusicProcessor::playInitSong(const std::string& style, const std::strin
         return;
     }
     
-    readMidi(songsPathStr, false);
-    notesToPlay = initMidiNotes;
+    readMidi(songsPathStr);
+    midiToPlay = initMidiToPlay;
     playMidi();
 }
 
 void LstmMusicProcessor::playMidi()
 {
+    lastNoteOn = juce::MidiMessage::endOfTrack();
     canPlayMidi = true;
 }
 
@@ -509,6 +540,7 @@ void LstmMusicProcessor::stopPlayingMidi()
     canPlayMidi = false;
     currentNote = 0;
     lastNotes = "";
+    elapsedSamples = 0;
     time = 0;
 }
 
@@ -528,42 +560,6 @@ bool LstmMusicProcessor::initVocabulary(const std::string& vocabPath)
     return this->vocabSize > 0;
 }
 
-juce::MidiMessageSequence LstmMusicProcessor::buildMidiSequence()
-{
-    // Add a MidiMessageSequence to store MIDI events
-    juce::MidiMessageSequence midiSequence;
-
-    float interval = 50; //msec
-    float start = 0;
-    
-    auto notesStr = indicesToNotes(outputNotes);
-    for (auto noteStr: notesStr)
-    {
-        auto notes = stringToNotesArray(noteStr);
-        
-        if (notes.size() > 1)
-            DBG("Here is the chord!!");
-        
-        for (auto& note: notes)
-        {
-            // Create a MIDI message for note-on event
-            juce::MidiMessage noteOnMessage = juce::MidiMessage::noteOn(1, note, 1.0f);
-            
-            // Add note-on message to the sequence at time 0
-            midiSequence.addEvent(noteOnMessage, start);
-            midiToPlay.addEvent(noteOnMessage, start);
-            // Create a MIDI message for note-off event after 1 second (assuming 1 second duration)
-            juce::MidiMessage noteOffMessage = juce::MidiMessage::noteOff(1, note);
-            
-            // Add note-off message to the sequence at time 50ms
-            midiSequence.addEvent(noteOffMessage, start + interval);
-            midiToPlay.addEvent(noteOffMessage, start + interval);
-        }
-        start += interval;
-    }
-    return midiSequence;
-}
-
 void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
 {
     juce::MidiFile midiFile;
@@ -571,8 +567,8 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
     // Add a MidiMessageSequence to store MIDI events
     juce::MidiMessageSequence midiSequence;
 
-    float interval = 50; //msec
-    float start = 0;
+    auto interval = noteLengthInTicks; //in ticks
+    double start = 0;
     
     auto notesStr = indicesToNotes(outputNotes);
     for (auto noteStr: notesStr)
@@ -584,28 +580,28 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
         
         for (auto& note: notes)
         {
+            auto timestamp = start;
+
             // Create a MIDI message for note-on event
             juce::MidiMessage noteOnMessage = juce::MidiMessage::noteOn(1, note, 1.0f);
-            
-            // Add note-on message to the sequence at time 0
-            midiSequence.addEvent(noteOnMessage, start);
-            midiToPlay.addEvent(noteOnMessage, start);
-            // Create a MIDI message for note-off event after 1 second (assuming 1 second duration)
+            noteOnMessage.setTimeStamp(timestamp);
+            midiSequence.addEvent(noteOnMessage);
+
+            // Create a MIDI message for note-off event after predefined time (assuming 1 second duration)
+            timestamp = (start + interval);
             juce::MidiMessage noteOffMessage = juce::MidiMessage::noteOff(1, note);
+            noteOffMessage.setTimeStamp(timestamp);
             
             // Add note-off message to the sequence at time 50ms
-            midiSequence.addEvent(noteOffMessage, start + interval);
-            midiToPlay.addEvent(noteOffMessage, start + interval);
+            midiSequence.addEvent(noteOffMessage);
         }
         start += interval;
     }
     
     // Add the MidiMessageSequence to the MidiFile
-    midiFile.setTicksPerQuarterNote(96); // Set ticks per quarter note
+    midiFile.setTicksPerQuarterNote(ticksPerQuarterNote); // Set ticks per quarter note
     midiFile.addTrack(midiSequence);
 
-    // Save the MidiFile to disk
-    //std::string outfilePath = "/Users/missolivia/Documents/Juce Projects/STopics/lstm_classical_music_generator/output/out.mid";
     juce::File midiOutputFile(midiPath);
     
     std::unique_ptr<juce::FileOutputStream> outputStream(midiOutputFile.createOutputStream());
@@ -617,7 +613,7 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
     }
 }
 
-bool LstmMusicProcessor::readMidi(const std::string& path, bool considerVocab)
+bool LstmMusicProcessor::readMidi(const std::string& path)
 {
     juce::File file(path);
     
@@ -627,6 +623,11 @@ bool LstmMusicProcessor::readMidi(const std::string& path, bool considerVocab)
     
     if (!midiFile.readFrom(midiStream))
         return false;
+    
+    //first, do this, so all timestamps are in seconds
+    //in samples - multiply by samplerate
+    midiFile.convertTimestampTicksToSeconds();
+    initMidiToPlay.clear();
     
     initMidiNotes.clear();
     
@@ -642,68 +643,33 @@ bool LstmMusicProcessor::readMidi(const std::string& path, bool considerVocab)
         if (event != nullptr && event->message.isNoteOn())
         {
             auto curMessage = event->message;
-
+            initMidiToPlay.push_back(curMessage);
+            std::cout<<"NoteOn: " << curMessage.getNoteNumber() << "Time: " << curMessage.getTimeStamp()<<std::endl;
+            
             chordDetect.addNote(curMessage.getNoteNumber(), curMessage.getTimeStamp());
             
             auto notes = learnNotes();
             if (!notes.empty())
             {
-                if (considerVocab)
-                {
-                    if (vocabulary.find(notes) != vocabulary.end())
-                    {
-                        initMidiNotes.push_back(notes);
-                    }
-                    else
-                    {
-                        DBG("!!!Chord not found: " + notes);
-                    }
-                }
-                else
+                if (vocabulary.find(notes) != vocabulary.end())
                 {
                     initMidiNotes.push_back(notes);
                 }
+                else
+                {
+                    DBG("!!!Chord not found and will be skipped: " + notes);
+                }
             }
+        }
+        else if (event->message.isNoteOff())
+        {
+            auto curMessage = event->message;
+            initMidiToPlay.push_back(curMessage);
+            std::cout<<"NoteOff: " << curMessage.getNoteNumber() << "Time: " << curMessage.getTimeStamp()<<std::endl;
         }
     }
     return true;
 }
-
-/*
-        auto i = startIndex;
-        auto midiIndex = startIndex;
-        while(i < startIndex + depth && midiIndex < totalEvents)
-        {
-            const auto event = track->getEventPointer(midiIndex);
-            
-            if (event != nullptr && event->message.isNoteOn())
-            {
-                auto curMessage = event->message;
-                
-                DBG(curMessage.getDescription());
-                DBG(curMessage.getTimeStamp());
-                
-                chordDetect.addNote(curMessage.getNoteNumber(), curMessage.getTimeStamp());
-                
-                auto notes = learnNotes();
-                if (!notes.empty())
-                {
-                    if (vocabulary.find(notes) != vocabulary.end())
-                    {
-                        initMidiNotes.push_back(notes);
-                        i++;
-                        DBG("chord:" + notes);
-                    }
-                    else
-                    {
-                        DBG("!!!Chord not found: " + notes);
-                    }
-                }
-            }
-            midiIndex++;
-        }
-    return true;
-}*/
 
 //==============================================================================
 bool LstmMusicProcessor::hasEditor() const
@@ -736,13 +702,6 @@ juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
     return new LstmMusicProcessor();
 }
-
-
-void LstmMusicProcessor::addMidi(juce::MidiMessage msg, int sampleOffset)
-{
-  midiToProcess.addEvent(msg, sampleOffset);
-}
-
 
 std::string LstmMusicProcessor::notesArrayToString(const std::vector<int>& notesArray)
 {
