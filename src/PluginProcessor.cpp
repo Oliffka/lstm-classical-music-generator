@@ -139,7 +139,7 @@ void LstmMusicProcessor::setCurrentStyle(const std::string& style)
     currentStyle = style;
 }
 
-std::vector<int> LstmMusicProcessor::getLstmDepths()
+std::vector<int> LstmMusicProcessor::getInputLengths()
 {
     std::vector<int> depths;
     

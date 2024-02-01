@@ -46,9 +46,12 @@ public:
 
     //==============================================================================
     //[UserMethods]     -- You can add your own custom methods in this section.
+    
+    //callbacks declaration to signal to PluginEditor that an event has occurred
     using btnClickedCallback = std::function<void()>;
     using cmbChangedCallback = std::function<void()>;
     
+    //public methods to set up the callbacks
     void setGenerateBtnClickedCallback(btnClickedCallback);
     void setPlayBtnClickedCallback(btnClickedCallback);
     void setPlayInitSongBtnClickedCallback(btnClickedCallback);
@@ -57,20 +60,21 @@ public:
     void setStyleChangedCallback(cmbChangedCallback);
     void setChooseFolderBtnClickedCallback(btnClickedCallback);
     void setOpenFolderClickedCallback(btnClickedCallback);
-
     void onSongIsFinished();
     
-    int getLstmDepth();
-    int getMelodyLength();
-    std::string getStyle();
-    std::string getSong();
+    //get-set methods
+    int getInputLength() const;
+    int getMelodyLength() const;
+    std::string getStyle() const;
+    std::string getSong() const;
     
     void setProgress(double);
-    void updateProgressLabel(int numGenerated, int numTotal);
     void setModelsFolderPath(const std::string&);
     
+    //methods to init the GUI components with proper data
+    void updateProgressLabel(int numGenerated, int numTotal);
     void fillStyleCmb(const std::vector<std::string>& styles);
-    void fillDepthCmb(const std::vector<int>& depths);
+    void fillInputLengthCmb(const std::vector<int>& depths);
     void fillSongsCmb(const std::vector<std::string>& songs);
     void enableUI(bool);
     //[/UserMethods]
@@ -83,11 +87,12 @@ public:
 
 private:
     //[UserVariables]   -- You can add your own custom variables in this section.
-    juce::ColourGradient silverGradient;
+    //colours of the main gui
     juce::Colour btnColor{0xff454444};
     juce::Colour btnTextColor{0xffFACA8D};
     juce::Colour cmbColor{0xff454444};
 
+    //definition callbacks as private members
     btnClickedCallback generateBtnClickedCallback;
     btnClickedCallback saveBtnClickedCallback;
     btnClickedCallback playBtnClickedCallback;
@@ -95,10 +100,12 @@ private:
     btnClickedCallback stopBtnClickedCallback;
     btnClickedCallback openFolderClickedCallback;
     btnClickedCallback chooseFolderClickedCallback;
-    
     cmbChangedCallback styleChangedCallback;
+    
+    //progress of the generation
     double progress = 0.0;
     
+    //flag to indicate that the song is playing at the moment
     bool isPlaying{false};
     //[/UserVariables]
 

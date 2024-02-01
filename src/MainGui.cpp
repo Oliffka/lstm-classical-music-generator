@@ -120,7 +120,7 @@ MainGui::MainGui ()
 
     cmbDepth.reset (new juce::ComboBox ("cmbDepth"));
     addAndMakeVisible (cmbDepth.get());
-    cmbDepth->setTooltip (TRANS("choose the depth of the pretrained LSTM model"));
+    cmbDepth->setTooltip (TRANS("choose the input length of the pretrained LSTM model"));
     cmbDepth->setEditableText (false);
     cmbDepth->setJustificationType (juce::Justification::centredLeft);
     cmbDepth->setTextWhenNothingSelected (juce::String());
@@ -221,8 +221,6 @@ MainGui::MainGui ()
     lblProgress->setColour (juce::TextEditor::backgroundColourId, juce::Colour (0x00000000));
 
     lblProgress->setBounds (30, 472, 264, 24);
-
-
 
     //[UserPreSize]
     btnGenerate->setColour(juce::TextButton::buttonColourId, btnColor);
@@ -537,7 +535,7 @@ void MainGui::onSongIsFinished()
     }
 }
 
-void MainGui::fillDepthCmb(const std::vector<int>& depths)
+void MainGui::fillInputLengthCmb(const std::vector<int>& depths)
 {
     cmbDepth->clear();
     int id = 1;
@@ -573,23 +571,23 @@ void MainGui::fillSongsCmb(const std::vector<std::string>& songs)
     cmbSongs->setSelectedItemIndex(0);
 }
 
-int MainGui::getLstmDepth()
+int MainGui::getInputLength() const
 {
     return cmbDepth->getText().getIntValue();
 }
 
-int MainGui::getMelodyLength()
+int MainGui::getMelodyLength() const
 {
     int value = static_cast<int>(sliderLen->getValue());
     return value;
 }
 
-std::string MainGui::getStyle()
+std::string MainGui::getStyle() const
 {
     return cmbStyle->getText().toStdString();
 }
 
-std::string MainGui::getSong()
+std::string MainGui::getSong() const
 {
     return cmbSongs->getText().toStdString();
 }

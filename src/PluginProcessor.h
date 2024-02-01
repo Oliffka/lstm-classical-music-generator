@@ -90,7 +90,7 @@ public:
     
     void initModels(const std::string& path);
     
-    std::vector<int> getLstmDepths();
+    std::vector<int> getInputLengths();
     std::vector<std::string> getMusicalStyles();
     std::vector<std::string> getTestSongs();
     

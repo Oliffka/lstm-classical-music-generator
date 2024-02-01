@@ -84,8 +84,8 @@ void LstmMusicEditor::disableUI()
 
 void LstmMusicEditor::updateLstmDepths()
 {
-    const auto depths = audioProcessor.getLstmDepths();
-    mainGui->fillDepthCmb(depths);
+    const auto depths = audioProcessor.getInputLengths();
+    mainGui->fillInputLengthCmb(depths);
 }
 
 void LstmMusicEditor::updateMusicalStyles()
@@ -107,7 +107,7 @@ void LstmMusicEditor::sliderValueChanged (juce::Slider *slider)
 
 void LstmMusicEditor::generateBtnClicked()
 {
-    auto res = this->audioProcessor.generateMelody(mainGui->getStyle(), mainGui->getSong(), mainGui->getLstmDepth(), mainGui->getMelodyLength());
+    auto res = this->audioProcessor.generateMelody(mainGui->getStyle(), mainGui->getSong(), mainGui->getInputLength(), mainGui->getMelodyLength());
     
     if (res)
     {
