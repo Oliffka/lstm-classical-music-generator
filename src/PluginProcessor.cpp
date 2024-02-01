@@ -336,7 +336,8 @@ std::vector<std::string> LstmMusicProcessor::extractPattern(int maxLength)
         return std::vector<std::string>{};
     }
     
-    int startIndex = juce::Random::getSystemRandom().nextInt(initMidiNotes.size() - maxLength + 1);
+    auto random = juce::Random(juce::Time::currentTimeMillis());
+    int startIndex = random.nextInt(initMidiNotes.size() - maxLength + 1);
     
     return std::vector<std::string>(initMidiNotes.begin() + startIndex,initMidiNotes.begin() + startIndex + maxLength);
 }
@@ -602,6 +603,11 @@ void LstmMusicProcessor::writeMidiFile(const std::string& midiPath)
     midiFile.setTicksPerQuarterNote(ticksPerQuarterNote); // Set ticks per quarter note
     midiFile.addTrack(midiSequence);
 
+    if (fs::exists(midiPath))
+    {
+        fs::remove(midiPath);
+    }
+    
     juce::File midiOutputFile(midiPath);
     
     std::unique_ptr<juce::FileOutputStream> outputStream(midiOutputFile.createOutputStream());

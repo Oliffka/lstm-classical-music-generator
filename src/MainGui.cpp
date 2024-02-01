@@ -99,7 +99,7 @@ MainGui::MainGui ()
 
     sliderLen.reset (new juce::Slider ("sliderLen"));
     addAndMakeVisible (sliderLen.get());
-    sliderLen->setRange (20, 200, 1);
+    sliderLen->setRange (10, 200, 1);
     sliderLen->setSliderStyle (juce::Slider::LinearBar);
     sliderLen->setTextBoxStyle (juce::Slider::TextBoxLeft, true, 80, 20);
     sliderLen->addListener (this);
