@@ -81,8 +81,8 @@ void LstmMusicEditor::disableUI()
 
 void LstmMusicEditor::updateLstmInputLengths()
 {
-    const auto depths = audioProcessor.getInputLengths();
-    mainGui->fillInputLengthCmb(depths);
+    const auto inputLengths = audioProcessor.getInputLengths();
+    mainGui->fillInputLengthCmb(inputLengths);
 }
 
 void LstmMusicEditor::updateMusicalStyles()

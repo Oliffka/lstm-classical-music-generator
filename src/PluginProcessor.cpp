@@ -34,7 +34,7 @@ LstmMusicProcessor::LstmMusicProcessor()
                      #endif
                        )
 #endif
-, chordDetect{100}, learningMode{false}
+, chordDetect{100}
 {
 }
 
@@ -141,16 +141,16 @@ void LstmMusicProcessor::setCurrentStyle(const std::string& style)
 
 std::vector<int> LstmMusicProcessor::getInputLengths()
 {
-    std::vector<int> depths;
+    std::vector<int> inputLengths;
     
     const auto& data = musicDict[currentStyle];
     for(auto const& model: data.availableLstmModels)
-        depths.push_back(model.first);
+        inputLengths.push_back(model.first);
     
-    return depths;
+    return inputLengths;
 }
 
-std::vector<std::string> LstmMusicProcessor::getMusicalStyles()
+std::vector<std::string> LstmMusicProcessor::getMusicalStyles() const
 {
     std::vector<std::string> styles;
     
@@ -282,10 +282,14 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     midiMessages.clear();
     if (!canPlayMidi)
     {
-        if (lastNoteOn.isNoteOn())
+        if (needToSendNoteOffs)
         {
-            auto noteOff = juce::MidiMessage::noteOff(1, lastNoteOn.getNoteNumber());
-            midiMessages.addEvent(noteOff, 0);
+            for (int i = 0; i < 127; i++)
+            {
+                auto noteOff = juce::MidiMessage::noteOff(1, i);
+                midiMessages.addEvent(noteOff, 0);
+            }
+            needToSendNoteOffs = false;
         }
         return;
     }
@@ -303,14 +307,8 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
             assert(offset >=0  && offset < numSamples);
                 
             midiMessages.addEvent(curMidiMessage, offset);
-            if (curMidiMessage.isNoteOn())
-            {
-                lastNoteOn = curMidiMessage;
-            }
-            
+
             currentNote++;
-            
-            std::cout<<"note: " <<curMidiMessage.getNoteNumber()<< "; offset: "<<offset<<std::endl;
             
             if (currentNote >= midiToPlay.size())
             {
@@ -532,7 +530,7 @@ void LstmMusicProcessor::playInitSong(const std::string& style, const std::strin
 
 void LstmMusicProcessor::playMidi()
 {
-    lastNoteOn = juce::MidiMessage::endOfTrack();
+    needToSendNoteOffs = true;
     canPlayMidi = true;
 }
 
@@ -540,9 +538,7 @@ void LstmMusicProcessor::stopPlayingMidi()
 {
     canPlayMidi = false;
     currentNote = 0;
-    lastNotes = "";
     elapsedSamples = 0;
-    time = 0;
 }
 
 bool LstmMusicProcessor::initVocabulary(const std::string& vocabPath)

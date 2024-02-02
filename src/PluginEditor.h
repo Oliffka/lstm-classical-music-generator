@@ -54,7 +54,7 @@ private:
     void openFolderClicked();
     void chooseModelsPathClicked();
     
-    //Let the user select a folder with pretrained models
+    //Let the user select a folder with pre-trained models
     std::string askModelPath();
     
 private:
