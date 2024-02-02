@@ -31,10 +31,12 @@ class ChordDetector{
          */
         std::vector<int> getChord(bool clearChord = true);
     private:
-        struct NoteInfo {int note; 
-                         unsigned long time;
-                         };
-        std::vector<NoteInfo> notes; 
+        struct NoteInfo
+        { int note;
+          unsigned long time;
+        };
+    
+        std::vector<NoteInfo> notes;
         std::vector<int> lastChord; 
         unsigned long maxInterval;
 

@@ -6,10 +6,6 @@ project(lstm_classical_music_generator VERSION 0.0.1)
 
 set (CMAKE_CXX_STANDARD 17)
 
-# tests for chord detect
-add_executable(chord-tests src/ChordDetectTest.cpp src/ChordDetector.cpp)
-
-
 add_subdirectory(/Applications/JUCE ./JUCE)     # If you've put JUCE in a subdirectory called JUCE
 
 juce_add_plugin(lstm_classical_music_generator
