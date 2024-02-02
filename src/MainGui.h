@@ -74,7 +74,7 @@ public:
     //methods to init the GUI components with proper data
     void updateProgressLabel(int numGenerated, int numTotal);
     void fillStyleCmb(const std::vector<std::string>& styles);
-    void fillInputLengthCmb(const std::vector<int>& depths);
+    void fillInputLengthCmb(const std::vector<int>& inputLengths);
     void fillSongsCmb(const std::vector<std::string>& songs);
     void enableUI(bool);
     //[/UserMethods]

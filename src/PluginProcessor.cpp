@@ -42,135 +42,10 @@ LstmMusicProcessor::~LstmMusicProcessor()
 {
 }
 
-void LstmMusicProcessor::setSongIsFinishedCallback(voidCallback callback)
-{
-    songIsFinishedCallback = callback;
-}
-
-void LstmMusicProcessor::setProgressCallback(progressCallback callback)
-{
-    noteGeneratedCallback = callback;
-}
-
-void LstmMusicProcessor::setGenerationCompletedCallback(voidCallback callback)
-{
-    generationCompletedCallback = callback;
-}
-
-void LstmMusicProcessor::initModels(const std::string& modelPath)
-{
-    if (!fs::exists(modelPath))
-        return;
-
-    musicDict.clear();
-    
-    for (const auto & entry : fs::directory_iterator(modelPath))
-    {
-        if (fs::is_directory(entry))
-        {
-            fs::path entryPath(entry);
-            
-            std::string styleFolderName = entryPath.filename().string();
-            std::cout << styleFolderName << std::endl;
-            
-            MusicData currentData;
-            for (const auto & curPath : fs::directory_iterator(entry))
-            {
-                if (fs::is_directory(curPath))
-                {
-                    fs::path curFolder(curPath);
-                    
-                    std::string folderName = curFolder.filename().string();
-                    if (folderName.compare("midi") == 0)
-                    {
-                        currentData.availableSongs = getSongs(curPath.path());
-                    }
-                    else
-                    {
-                        int lstmDepth = -1;
-                        try
-                        {
-                           lstmDepth = std::stoi(folderName);
-                        }
-                        catch (...)
-                        {
-                           std::cout << "error: can't parse folder name: " << folderName;
-                            continue;
-                        }
-                        if (lstmDepth > 0)
-                        {
-                            auto curModelPath = curFolder;
-                            curModelPath /= (styleFolderName + "_" + folderName + ".json");
-                            
-                            currentData.availableLstmModels.insert({lstmDepth, curModelPath.string()});
-                        }
-                    }
-                }
-            }
-            musicDict.insert({styleFolderName, currentData});
-        }
-    }
-    modelsAreLoaded = true;
-}
-
-std::map<std::string, std::string> LstmMusicProcessor::getSongs(const std::string& path)
-{
-    std::map<std::string, std::string> songs;
-    for (const auto & curPath : fs::directory_iterator(path))
-    {
-        if (fs::is_regular_file(curPath))
-        {
-            fs::path curSong(curPath);
-            
-            const auto ext = curSong.extension();
-            if (ext == ".mid" || ext == ".midi")
-            {
-                std::string songName = curSong.filename().string();
-                songs.insert({songName, curPath.path()});
-                
-            }
-        }
-    }
-    return songs;
-}
-
-void LstmMusicProcessor::setCurrentStyle(const std::string& style)
-{
-    currentStyle = style;
-}
-
-std::vector<int> LstmMusicProcessor::getInputLengths()
-{
-    std::vector<int> inputLengths;
-    
-    const auto& data = musicDict[currentStyle];
-    for(auto const& model: data.availableLstmModels)
-        inputLengths.push_back(model.first);
-    
-    return inputLengths;
-}
-
-std::vector<std::string> LstmMusicProcessor::getMusicalStyles() const
-{
-    std::vector<std::string> styles;
-    
-    for(auto const& style: musicDict)
-        styles.push_back(style.first);
-    
-    return styles;
-}
-
-std::vector<std::string> LstmMusicProcessor::getTestSongs()
-{
-    std::vector<std::string> songs;
-    const auto& data = musicDict[currentStyle];
-    for(auto const& song: data.availableSongs)
-        songs.push_back(song.first);
-    
-    return songs;
-}
-
 //==============================================================================
+//Override methods
+//==============================================================================
+
 const juce::String LstmMusicProcessor::getName() const
 {
     return JucePlugin_Name;
@@ -235,12 +110,8 @@ void LstmMusicProcessor::changeProgramName (int index, const juce::String& newNa
 //==============================================================================
 void LstmMusicProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // here we know the sample rate so can set the
-    // maxinterval properly on the chord detector
-    // 0.5ms seems to be about right
     this->sampleRate = sampleRate;
     double maxIntervalSecs = 0.001; // 1ms
-    //std::cout << "Max interval in samples " << maxIntervalInSamples << " or " << (maxIntervalInSamples * 96000 * 1000) << "ms";
     chordDetect = ChordDetector((unsigned long) maxIntervalSecs);
     elapsedSamples = 0;
 }
@@ -299,6 +170,7 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     if (currentNote < midiToPlay.size())
     {
         auto curMidiMessage = midiToPlay[currentNote];
+        //Here we assume that timestamp is in seconds
         auto curTimestampInSamples = curMidiMessage.getTimeStamp() * sampleRate;
         
         while (elapsedSamples + numSamples > curTimestampInSamples)
@@ -324,6 +196,319 @@ void LstmMusicProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     }
     
     elapsedSamples  += numSamples;
+}
+
+//==============================================================================
+bool LstmMusicProcessor::hasEditor() const
+{
+    return true; // (change this to false if you choose to not supply an editor)
+}
+
+juce::AudioProcessorEditor* LstmMusicProcessor::createEditor()
+{
+    return new LstmMusicEditor (*this);
+}
+
+//==============================================================================
+void LstmMusicProcessor::getStateInformation (juce::MemoryBlock& destData)
+{
+    // You should use this method to store your parameters in the memory block.
+    // You could do that either as raw data, or use the XML or ValueTree classes
+    // as intermediaries to make it easy to save and load complex data.
+}
+
+void LstmMusicProcessor::setStateInformation (const void* data, int sizeInBytes)
+{
+    // You should use this method to restore your parameters from this memory block,
+    // whose contents will have been created by the getStateInformation() call.
+}
+
+//==============================================================================
+// This creates new instances of the plugin..
+juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
+{
+    return new LstmMusicProcessor();
+}
+
+//==============================================================================
+// Midi notes generation
+//==============================================================================
+
+bool LstmMusicProcessor::generateMelody(const std::string& style, const std::string& song, int lstmInputLength, int notesCount)
+{
+    // Initialize model
+    auto curMusicData = musicDict[style];
+    const auto modelPathStr = curMusicData.availableLstmModels[lstmInputLength];
+    const auto songsPathStr = curMusicData.availableSongs[song];
+    
+    fs::path modelPath{modelPathStr};
+    
+    fs::path vocabPath = modelPath.parent_path().parent_path();
+    vocabPath /= (style + "_vocab.json");
+    
+    if (!fs::exists(modelPath))
+    {
+        assert("The model path doesn't exist!");
+        return false;
+    }
+    
+    if (!fs::exists(vocabPath))
+    {
+        assert("The vocabulary path doesn't exist!");
+        return false;
+    }
+    
+    if (!fs::exists(fs::path{songsPathStr}))
+    {
+        assert("The chosen song path doesn't exist!");
+        return false;
+    }
+    
+    if (!initVocabulary(vocabPath.string()))
+    {
+        DBG("Can't init vocabulary");
+        return false;
+    }
+    
+    if (!readMidi(songsPathStr))
+    {
+        DBG("Can't read midi");
+        return false;
+    }
+    
+    const auto patternStr = extractPattern(lstmInputLength);
+    if (patternStr.size() != lstmInputLength)
+    {
+        DBG("Can't extract notes pattern of the required length");
+        return false;
+    }
+    
+    auto pattern = notesToIndices(patternStr);
+
+    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, pattern, notesCount, modelPath);
+    progressThread.detach();
+    
+    return true;
+}
+
+void LstmMusicProcessor::runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath)
+{
+    const auto model = fdeep::load_model(modelPath);
+    auto curPattern = pattern;
+    canPlayMidi = false;
+    
+    outputNotes.clear();
+    generatedMidiMesssagesToPlay.clear();
+    
+    for (auto noteNumber = 0; noteNumber< notesCount; noteNumber++ )
+    {
+        auto model_input = normalizeVector(curPattern, vocabSize);
+        
+        const auto best_prediction = model.predict_class_with_confidence ({fdeep::tensor(fdeep::tensor_shape(static_cast<std::size_t>(model_input.size()), static_cast<std::size_t>(1)), model_input)}).first;
+
+        outputNotes.push_back(best_prediction);
+        
+        std::cout << "output index: " << best_prediction << "; note: " << vocabReverse[best_prediction]<<std::endl;
+        
+        curPattern.push_back(best_prediction);
+        curPattern.erase(curPattern.begin());
+        
+        if (noteGeneratedCallback)
+        {
+            noteGeneratedCallback(noteNumber+1, notesCount);
+        }
+    }
+    
+    outputNotesStr = indicesToNotes(outputNotes);
+    if (generationCompletedCallback)
+    {
+        generationCompletedCallback();
+    }
+}
+
+//==============================================================================
+// Main actions with midi songs
+//==============================================================================
+
+void LstmMusicProcessor::playInitSong(const std::string& style, const std::string& song)
+{
+    auto curMusicData = musicDict[style];
+    const auto songsPathStr = curMusicData.availableSongs[song];
+    
+    if (!fs::exists(fs::path{songsPathStr}))
+    {
+        assert("The chosen song path doesn't exist!");
+        return;
+    }
+    
+    readMidi(songsPathStr);
+    midiToPlay = initMidiMessagesToPlay;
+    playMidi();
+}
+
+void LstmMusicProcessor::playGeneratedSong()
+{
+    buildgeneratedMidiMesssagesToPlay();
+    midiToPlay = generatedMidiMesssagesToPlay;
+    playMidi();
+}
+
+void LstmMusicProcessor::playMidi()
+{
+    needToSendNoteOffs = true;
+    canPlayMidi = true;
+}
+
+void LstmMusicProcessor::stopPlayingMidi()
+{
+    canPlayMidi = false;
+    currentNote = 0;
+    elapsedSamples = 0;
+}
+
+void LstmMusicProcessor::saveMidi(const std::string& midiPath)
+{
+    writeMidiFile(midiPath);
+}
+
+//==============================================================================
+// Get/Set methods
+//==============================================================================
+
+void LstmMusicProcessor::setCurrentStyle(const std::string& style)
+{
+    currentStyle = style;
+}
+
+std::vector<int> LstmMusicProcessor::getInputLengths()
+{
+    std::vector<int> inputLengths;
+    
+    const auto& data = musicDict[currentStyle];
+    for(auto const& model: data.availableLstmModels)
+        inputLengths.push_back(model.first);
+    
+    return inputLengths;
+}
+
+std::vector<std::string> LstmMusicProcessor::getMusicalStyles() const
+{
+    std::vector<std::string> styles;
+    
+    for(auto const& style: musicDict)
+        styles.push_back(style.first);
+    
+    return styles;
+}
+
+std::vector<std::string> LstmMusicProcessor::getTestSongs()
+{
+    std::vector<std::string> songs;
+    const auto& data = musicDict[currentStyle];
+    for(auto const& song: data.availableSongs)
+        songs.push_back(song.first);
+    
+    return songs;
+}
+
+//==============================================================================
+// Setting callbacks
+//==============================================================================
+
+void LstmMusicProcessor::setSongIsFinishedCallback(voidCallback callback)
+{
+    songIsFinishedCallback = callback;
+}
+
+void LstmMusicProcessor::setProgressCallback(progressCallback callback)
+{
+    noteGeneratedCallback = callback;
+}
+
+void LstmMusicProcessor::setGenerationCompletedCallback(voidCallback callback)
+{
+    generationCompletedCallback = callback;
+}
+
+//==============================================================================
+// Internal and helpers methods
+//==============================================================================
+
+void LstmMusicProcessor::initModels(const std::string& modelPath)
+{
+    if (!fs::exists(modelPath))
+        return;
+
+    musicDict.clear();
+    
+    for (const auto & entry : fs::directory_iterator(modelPath))
+    {
+        if (fs::is_directory(entry))
+        {
+            fs::path entryPath(entry);
+            
+            std::string styleFolderName = entryPath.filename().string();
+            std::cout << styleFolderName << std::endl;
+            
+            MusicData currentData;
+            for (const auto & curPath : fs::directory_iterator(entry))
+            {
+                if (fs::is_directory(curPath))
+                {
+                    fs::path curFolder(curPath);
+                    
+                    std::string folderName = curFolder.filename().string();
+                    if (folderName.compare("midi") == 0)
+                    {
+                        currentData.availableSongs = getSongs(curPath.path());
+                    }
+                    else
+                    {
+                        int lstmInputLength = -1;
+                        try
+                        {
+                           lstmInputLength = std::stoi(folderName);
+                        }
+                        catch (...)
+                        {
+                           std::cout << "error: can't parse folder name: " << folderName;
+                            continue;
+                        }
+                        if (lstmInputLength > 0)
+                        {
+                            auto curModelPath = curFolder;
+                            curModelPath /= (styleFolderName + "_" + folderName + ".json");
+                            
+                            currentData.availableLstmModels.insert({lstmInputLength, curModelPath.string()});
+                        }
+                    }
+                }
+            }
+            musicDict.insert({styleFolderName, currentData});
+        }
+    }
+    modelsAreLoaded = true;
+}
+
+std::map<std::string, std::string> LstmMusicProcessor::getSongs(const std::string& path)
+{
+    std::map<std::string, std::string> songs;
+    for (const auto & curPath : fs::directory_iterator(path))
+    {
+        if (fs::is_regular_file(curPath))
+        {
+            fs::path curSong(curPath);
+            
+            const auto ext = curSong.extension();
+            if (ext == ".mid" || ext == ".midi")
+            {
+                std::string songName = curSong.filename().string();
+                songs.insert({songName, curPath.path()});
+                
+            }
+        }
+    }
+    return songs;
 }
 
 std::vector<std::string> LstmMusicProcessor::extractPattern(int maxLength)
@@ -373,113 +558,9 @@ std::vector<std::string> LstmMusicProcessor::indicesToNotes(const std::vector<in
     return notes;
 }
 
-bool LstmMusicProcessor::generateMelody(const std::string& style, const std::string& song, int lstmDepth, int notesCount)
+void LstmMusicProcessor::buildgeneratedMidiMesssagesToPlay()
 {
-    // Initialize model
-    auto curMusicData = musicDict[style];
-    const auto modelPathStr = curMusicData.availableLstmModels[lstmDepth];
-    const auto songsPathStr = curMusicData.availableSongs[song];
-    
-    fs::path modelPath{modelPathStr};
-    
-    fs::path vocabPath = modelPath.parent_path().parent_path();
-    vocabPath /= (style + "_vocab.json");
-    
-    if (!fs::exists(modelPath))
-    {
-        assert("The model path doesn't exist!");
-        return false;
-    }
-    
-    if (!fs::exists(vocabPath))
-    {
-        assert("The vocabulary path doesn't exist!");
-        return false;
-    }
-    
-    if (!fs::exists(fs::path{songsPathStr}))
-    {
-        assert("The chosen song path doesn't exist!");
-        return false;
-    }
-    
-    if (!initVocabulary(vocabPath.string()))
-    {
-        DBG("Can't init vocabulary");
-        return false;
-    }
-    
-    if (!readMidi(songsPathStr))
-    {
-        DBG("Can't read midi");
-        return false;
-    }
-    
-    const auto patternStr = extractPattern(lstmDepth);
-    if (patternStr.size() != lstmDepth)
-    {
-        DBG("Can't extract notes pattern of the required length");
-        return false;
-    }
-    
-    auto pattern = notesToIndices(patternStr);
-
-    std::thread progressThread(&LstmMusicProcessor::runGeneration, this, pattern, notesCount, modelPath);
-    progressThread.detach();
-    
-    return true;
-}
-
-void LstmMusicProcessor::runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath)
-{
-    const auto model = fdeep::load_model(modelPath);
-    auto curPattern = pattern;
-    canPlayMidi = false;
-    
-    outputNotes.clear();
-    generatedMidiToPlay.clear();
-    
-    for (auto noteNumber = 0; noteNumber< notesCount; noteNumber++ )
-    {
-        auto model_input = normalizeVector(curPattern, vocabSize);
-        
-        const auto best_prediction = model.predict_class_with_confidence ({fdeep::tensor(fdeep::tensor_shape(static_cast<std::size_t>(model_input.size()), static_cast<std::size_t>(1)), model_input)}).first;
-
-        outputNotes.push_back(best_prediction);
-        
-        std::cout << "output index: " << best_prediction << "; note: " << vocabReverse[best_prediction]<<std::endl;
-        
-        curPattern.push_back(best_prediction);
-        curPattern.erase(curPattern.begin());
-        
-        if (noteGeneratedCallback)
-        {
-            noteGeneratedCallback(noteNumber+1, notesCount);
-        }
-    }
-    
-    outputNotesStr = indicesToNotes(outputNotes);
-    if (generationCompletedCallback)
-    {
-        generationCompletedCallback();
-    }
-}
-
-void LstmMusicProcessor::saveMidi(const std::string& midiPath)
-{
-    writeMidiFile(midiPath);
-}
-
-void LstmMusicProcessor::playGeneratedSong()
-{
-    buildGeneratedMidiToPlay();
-    midiToPlay = generatedMidiToPlay;
-    playMidi();
-}
-
-void LstmMusicProcessor::buildGeneratedMidiToPlay()
-{
-    if (generatedMidiToPlay.empty())
+    if (generatedMidiMesssagesToPlay.empty())
     {
         float interval = noteLengthInTicks;
         float start = 0;
@@ -499,46 +580,17 @@ void LstmMusicProcessor::buildGeneratedMidiToPlay()
                 // Create a MIDI message for note-on event
                 juce::MidiMessage noteOnMessage = juce::MidiMessage::noteOn(1, note, 1.0f);
                 noteOnMessage.setTimeStamp(timestamp);
-                generatedMidiToPlay.push_back(noteOnMessage);
+                generatedMidiMesssagesToPlay.push_back(noteOnMessage);
                 
                 // Create a MIDI message for note-off event
                 timestamp = (start + interval)* msecPerTick;
                 juce::MidiMessage noteOffMessage = juce::MidiMessage::noteOff(1, note);
                 noteOffMessage.setTimeStamp(timestamp);
-                generatedMidiToPlay.push_back(noteOffMessage);
+                generatedMidiMesssagesToPlay.push_back(noteOffMessage);
             }
             start += interval;
         }
     }
-}
-
-void LstmMusicProcessor::playInitSong(const std::string& style, const std::string& song)
-{
-    auto curMusicData = musicDict[style];
-    const auto songsPathStr = curMusicData.availableSongs[song];
-    
-    if (!fs::exists(fs::path{songsPathStr}))
-    {
-        assert("The chosen song path doesn't exist!");
-        return;
-    }
-    
-    readMidi(songsPathStr);
-    midiToPlay = initMidiToPlay;
-    playMidi();
-}
-
-void LstmMusicProcessor::playMidi()
-{
-    needToSendNoteOffs = true;
-    canPlayMidi = true;
-}
-
-void LstmMusicProcessor::stopPlayingMidi()
-{
-    canPlayMidi = false;
-    currentNote = 0;
-    elapsedSamples = 0;
 }
 
 bool LstmMusicProcessor::initVocabulary(const std::string& vocabPath)
@@ -628,10 +680,10 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
     if (!midiFile.readFrom(midiStream))
         return false;
     
-    //first, do this, so all timestamps are in seconds
-    //in samples - multiply by samplerate
+    //to make sure that all timestamps are in seconds
+    //to get in samples - multiply by samplerate
     midiFile.convertTimestampTicksToSeconds();
-    initMidiToPlay.clear();
+    initMidiMessagesToPlay.clear();
     
     initMidiNotes.clear();
     
@@ -647,7 +699,7 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
         if (event != nullptr && event->message.isNoteOn())
         {
             auto curMessage = event->message;
-            initMidiToPlay.push_back(curMessage);
+            initMidiMessagesToPlay.push_back(curMessage);
             std::cout<<"NoteOn: " << curMessage.getNoteNumber() << "Time: " << curMessage.getTimeStamp()<<std::endl;
             
             chordDetect.addNote(curMessage.getNoteNumber(), curMessage.getTimeStamp());
@@ -668,43 +720,11 @@ bool LstmMusicProcessor::readMidi(const std::string& path)
         else if (event->message.isNoteOff())
         {
             auto curMessage = event->message;
-            initMidiToPlay.push_back(curMessage);
+            initMidiMessagesToPlay.push_back(curMessage);
             std::cout<<"NoteOff: " << curMessage.getNoteNumber() << "Time: " << curMessage.getTimeStamp()<<std::endl;
         }
     }
     return true;
-}
-
-//==============================================================================
-bool LstmMusicProcessor::hasEditor() const
-{
-    return true; // (change this to false if you choose to not supply an editor)
-}
-
-juce::AudioProcessorEditor* LstmMusicProcessor::createEditor()
-{
-    return new LstmMusicEditor (*this);
-}
-
-//==============================================================================
-void LstmMusicProcessor::getStateInformation (juce::MemoryBlock& destData)
-{
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
-}
-
-void LstmMusicProcessor::setStateInformation (const void* data, int sizeInBytes)
-{
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
-}
-
-//==============================================================================
-// This creates new instances of the plugin..
-juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
-{
-    return new LstmMusicProcessor();
 }
 
 std::string LstmMusicProcessor::notesArrayToString(const std::vector<int>& notesArray)

@@ -26,48 +26,45 @@ public:
     //==============================================================================
     LstmMusicProcessor();
     ~LstmMusicProcessor() override;
-
+    
     //==============================================================================
     void prepareToPlay (double sampleRate, int samplesPerBlock) override;
     void releaseResources() override;
-
-   #ifndef JucePlugin_PreferredChannelConfigurations
+    
+#ifndef JucePlugin_PreferredChannelConfigurations
     bool isBusesLayoutSupported (const BusesLayout& layouts) const override;
-   #endif
-
+#endif
+    
     void processBlock (juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
-
+    
     //==============================================================================
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override;
-
+    
     //==============================================================================
     const juce::String getName() const override;
-
+    
     bool acceptsMidi() const override;
     bool producesMidi() const override;
     bool isMidiEffect() const override;
     double getTailLengthSeconds() const override;
-
+    
     //==============================================================================
     int getNumPrograms() override;
     int getCurrentProgram() override;
     void setCurrentProgram (int index) override;
     const juce::String getProgramName (int index) override;
     void changeProgramName (int index, const juce::String& newName) override;
-
+    
     //==============================================================================
     void getStateInformation (juce::MemoryBlock& destData) override;
     void setStateInformation (const void* data, int sizeInBytes) override;
-
-    //generate new melody using selected lstm model
-    bool generateMelody(const std::string& style, const std::string& song, int lstmDepth, int notesCount);
     
-    //save last generated midi
-    void saveMidi(const std::string&);
+    //generate new melody via selected lstm model
+    bool generateMelody(const std::string& style, const std::string& song, int lstmInputLength, int notesCount);
     
-    //internal method
-    void playMidi();
+    //save last generated midi melody into .mid file
+    void saveMidi(const std::string& path);
     
     //stop playing midi
     void stopPlayingMidi();
@@ -75,13 +72,10 @@ public:
     //play the selected musical piece
     void playInitSong(const std::string& style, const std::string& song);
     
-    //play last generated midi
+    //play last generated midi melody
     void playGeneratedSong();
     
-    //read midi events from the file
-    bool readMidi(const std::string& path);
-    
-    //occur when user choose a composer
+    //setting current style when user choose a composer in comboBox
     void setCurrentStyle(const std::string& style);
     
     //init models from the given folder
@@ -101,7 +95,7 @@ public:
     using progressCallback = std::function<void(int, int)>;
     void setProgressCallback(progressCallback);
     
-    //flag which indicates the models have been loaded
+    //flag which indicates that the models have been loaded
     //needed just for showing/not showing the hint
     bool modelsAreLoaded{false};
 private:
@@ -113,62 +107,107 @@ private:
     };
     std::map<std::string, MusicData> musicDict;
     
-    //vocabularies which are used by the model, 1 vocabulary for each composer(style)
-    std::map<std::string, int> vocabulary;
-    std::map<int, std::string> vocabReverse;
-    int vocabSize{0};
-    
     //read available midi songs from the given path
     std::map<std::string, std::string> getSongs(const std::string& path);
-    
-    //callbacks
-    voidCallback songIsFinishedCallback;
-    progressCallback noteGeneratedCallback;
-    voidCallback generationCompletedCallback;
     
     //current style selected by user
     std::string currentStyle;
     
-    std::vector<std::string> initMidiNotes;
-    std::vector<std::string> extractPattern(int maxLength);
-    std::vector<float> normalizeVector(const std::vector<int>& data, int vocabSize);
+    /** Vocabulary section **/
     
-    void runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath);
-    void writeMidiFile(const std::string& midiPath);
+    //read vocabulary via nlohmann::json lib from the given path
     bool initVocabulary(const std::string& path);
-    void buildGeneratedMidiToPlay();
     
+    //vocabularies which are used by LSTM model, 1 vocabulary for each composer(style)
+    std::map<std::string, int> vocabulary;
+    std::map<int, std::string> vocabReverse;
+    int vocabSize{0};
+    
+    //helpers methods which convert a vector of vocabulary indexes(actually, keys) into
+    //a vector of notes/chords string representation (actually, values) and vice versa
+    //vocabulary and vocabReverse are used for this purpose
     std::vector<int> notesToIndices(const std::vector<std::string>&);
     std::vector<std::string> indicesToNotes(const std::vector<int>&);
     
-    //ugly way to indicate that there is no last NoteOn event
-    bool needToSendNoteOffs{false};
-
-
+    /** Callbacks section **/
+    
+    voidCallback songIsFinishedCallback;
+    progressCallback noteGeneratedCallback;
+    voidCallback generationCompletedCallback;
+    
     /** Playback section **/
     
-    //sequence of midiMessages which will be played if user clicks 'Play' button
+    //vector of midiMessages that will be played if user clicks 'Play' button
     //in Style section
-    std::vector<juce::MidiMessage> initMidiToPlay;
+    std::vector<juce::MidiMessage> initMidiMessagesToPlay;
     
-    //sequence of newly generated midiMessages which will be played if user
+    //vector of newly generated midiMessages that will be played if user
     //clicks 'Play' button in Generation section.
-    std::vector<juce::MidiMessage> generatedMidiToPlay;
+    std::vector<juce::MidiMessage> generatedMidiMesssagesToPlay;
     
-    //reference to the proper sequence
-    std::vector<juce::MidiMessage>& midiToPlay = initMidiToPlay;
+    //this method forms 'generatedMidiMesssagesToPlay' vector of midiMessages with proper
+    //timestamps to be played when user clicks 'Play' in Generation section
+    void buildgeneratedMidiMesssagesToPlay();
     
+    //reference to a proper vector with midiMessages
+    std::vector<juce::MidiMessage>& midiToPlay = initMidiMessagesToPlay;
+    
+    //if a user clicks 'Stop' while playing midi, we need to make sure that
+    //all noteOffs are sent (otherwise, the notes without noteOff event will sound
+    //for a long time)
+    bool needToSendNoteOffs{false};
+    
+    //vector of output indixes of the generated notes according to the dictionary
     std::vector<int> outputNotes;
+    
+    //the opposite, vector of string representation of the generated notes/chords
     std::vector<std::string> outputNotesStr;
     
+    //flag to indicate in processBlock to play midiMessages
     bool canPlayMidi{false};
-    int currentNote = 0;
-    unsigned long elapsedSamples = 0;
-    double sampleRate = 0.0f;
     
-    const double msecPerTick = 0.005;
-    const int ticksPerQuarterNote = 96;
-    const int noteLengthInTicks = 56;
+    //index of the current note which is being played
+    int currentNote{0};
+    
+    //keeps the number of elapsed sapmles to process correctly
+    //the timing of midiMessages in processBlock
+    unsigned long elapsedSamples{0};
+    
+    //sampling rate
+    double sampleRate{0.0f};
+    
+    //5msec for 1 tick is used, it's needed to play the generated sequence of notes
+    const double msecPerTick{0.005f};
+    
+    //it's needed when writing generated midi notes into a file
+    const int ticksPerQuarterNote{96};
+    
+    //length of the notes in ticks, i wanted shorter than a quarter notes duration
+    const int noteLengthInTicks{56};
+    
+    /** Internal helper methods  **/
+    
+    //read midi events from the file
+    bool readMidi(const std::string& path);
+    
+    //vector of notes/chords of the selected song
+    std::vector<std::string> initMidiNotes;
+    
+    //extract pattern of the given length from initMidiNotes starting with random index
+    //so, each time user clicks 'Generate', the init pattern assumed to be different
+    std::vector<std::string> extractPattern(int length);
+    
+    //normalize indexes of the notes/chords according to the vocabulary size
+    std::vector<float> normalizeVector(const std::vector<int>& data, int vocabSize);
+    
+    //this method generates notes in different thread to avoid freezing the gui thread
+    void runGeneration(const std::vector<int>& pattern, int notesCount, const std::string& modelPath);
+    
+    //this method writes the generated midi notes into a .mid file
+    void writeMidiFile(const std::string& midiPath);
+    
+    //internal method when 'Play' button is clicked
+    void playMidi();
     
     //helper class which helps to parse the midi sequence into sequence of chords
     ChordDetector chordDetect;

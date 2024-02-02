@@ -546,11 +546,11 @@ void MainGui::onSongIsFinished()
     }
 }
 
-void MainGui::fillInputLengthCmb(const std::vector<int>& depths)
+void MainGui::fillInputLengthCmb(const std::vector<int>& inputLengths)
 {
     cmbDepth->clear();
     int id = 1;
-    for (auto depth: depths)
+    for (auto depth: inputLengths)
     {
         cmbDepth->addItem(String(depth), id);
         id++;
