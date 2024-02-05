@@ -25,6 +25,7 @@ The first ‘/Applications/JUCE’ indicates where JUCE can be found. The second
 6. Finally, you can select the composer, initial song, length of the context and the number of notes to generate. Then, click 'Generate' and wait until a new melody is generated
 
 
+![alt text](https://github.com/Oliffka/lstm_classical_music_generator/blob/main/image/plugin.png?raw=true)
 
 
 
