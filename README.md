@@ -1,5 +1,6 @@
 # lstm_classical_music_generator
- Project within the course "Selected Topics in Music and Acoustic Engineering", 2023-2024  
+ Project within the course "Selected Topics in Music and Acoustic Engineering", prof. Yee-King Matthew John  
+ Politecnico di Milano, 2023-2024  
  Built and tested on MacOs
 
 # How to build from the source
@@ -12,17 +13,21 @@ Probably, you need to update the add_subdirectory command to point at your JUCE 
 add_subdirectory(/Applications/JUCE ./JUCE)   
 The first ‘/Applications/JUCE’ indicates where JUCE can be found. The second part ‘./JUCE’ defines where JUCE will be copied to in the build folder.  
 
-2.From the root project folder, run "cmake -G "Xcode" -B build". The .xcodeproj will be in the 'build' folder.
+2. From the root project folder, run "cmake -G "Xcode" -B build". The .xcodeproj will be in the 'build' folder.
 
+# How to train the model
+In the 'python' folder you can find an example how to train the LSTM model. Also, there are datasets that I used for this project. If there is a wish to train
+a model with a different dataset(to experiment with another musical style), it can be easily done by correcting the paths in the notebook and uploading proper midi files within the dataset.  
 # How to use
 1. If you build the project from the source code, it will install the plugin into the default location
 (/Users/<username>/Library/Audio/Plug-Ins/VST3 or /Users/<username>/Library/Audio/Plug-Ins/Components)
 
-2. If no, you have to download plugin from bin/ folder and place it in the plugin location on your system  
+2. If no, you have to download the plugin from bin/ folder and place it in the plugin location on your system  
 3. Once done, you should be able to see lstm_classical_music_generator in the plugin's list in your DAW
-4. Also, you need to download /models folder and place it somewhere on your disc
-5. You need to load the models to the plugin by choosing the folder with the models. The button is in the 'parameters' block  
-6. Finally, you can select the composer, initial song, length of the context and the number of notes to generate. Then, click 'Generate' and wait until a new melody is generated
+4. Also, you need to download /models folder (it contains pre-trained models in a suitable for frugally-deep format, as well as the vocabularies
+   for each musical style and initial midi songs) and place it somewhere on your disc
+6. You need to load the models to the plugin by choosing the folder with the models. The button is in the 'parameters' block  
+7. Finally, you can select the composer, initial song, length of the context and the number of notes to generate. Then, click 'Generate' and wait until a new melody is generated
 
 
 ![alt text](https://github.com/Oliffka/lstm_classical_music_generator/blob/main/image/plugin.png?raw=true)
