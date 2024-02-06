@@ -9,7 +9,7 @@
 1.2 nlohmann/json https://github.com/nlohmann/json  
 1.3 Juce https://juce.com/  
 To build your project, cmake needs to know where JUCE is on your system.  
-Probably, you need to update the add_subdirectory command to point at your JUCE directory. On my system, I have it here:  
+Probably, you need to update the add_subdirectory command in CMakeLists to point at your JUCE directory. On my system, I have it here:  
 add_subdirectory(/Applications/JUCE ./JUCE)   
 The first ‘/Applications/JUCE’ indicates where JUCE can be found. The second part ‘./JUCE’ defines where JUCE will be copied to in the build folder.  
 
