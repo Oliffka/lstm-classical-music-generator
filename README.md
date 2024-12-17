@@ -1,7 +1,10 @@
-# lstm_classical_music_generator
+# LSTM classical music generator plugin
  Project within the course "Selected Topics in Music and Acoustic Engineering", prof. Yee-King Matthew John  
  Politecnico di Milano, 2023-2024  
- Built and tested on MacOs
+ Built and tested on macOs
+
+# Project description
+This project aims to experiment with LSTM models with different context lengths to generate music in the style of 3 classical composers: Mozart, Bach and Chopin.
 
 # How to build from the source
 1. The project has the following dependencies, so before starting, you have to install them:  
