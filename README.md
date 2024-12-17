@@ -32,6 +32,7 @@ a model with a different dataset(to experiment with another musical style), it c
 6. You need to load the models to the plugin by choosing the folder with the models. The button is in the 'parameters' block  
 7. Finally, you can select the composer, initial song, length of the context and the number of notes to generate. Then, click 'Generate' and wait until a new melody is generated
 
+The demo video and brief presentation of the project is also available: [LSTM Classical Music Generator](https://www.youtube.com/watch?v=C4yEzb9eYeY)
 
 ![alt text](https://github.com/Oliffka/lstm_classical_music_generator/blob/main/image/plugin.png?raw=true)
 
